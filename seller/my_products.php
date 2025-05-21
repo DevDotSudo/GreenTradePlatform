@@ -101,11 +101,31 @@ $deleted = isset($_GET['deleted']) ? $_GET['deleted'] : '';
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
-    <script src="../assets/js/firebase.js"></script>
+    
+    <script>
+    // Firebase configuration
+    const firebaseConfig = {
+        apiKey: "<?php echo getenv('FIREBASE_API_KEY'); ?>",
+        authDomain: "greentrade-project.firebaseapp.com",
+        projectId: "greentrade-project",
+        storageBucket: "greentrade-project.firebasestorage.app",
+        messagingSenderId: "582047266659",
+        appId: "1:582047266659:web:47054d9178fbd66f0d8556",
+        measurementId: "G-M2FMJ35F4K"
+    };
+    
+    // Initialize Firebase
+    if (typeof firebase !== 'undefined') {
+        firebase.initializeApp(firebaseConfig);
+        console.log('Firebase initialized successfully');
+    } else {
+        console.error('Firebase SDK not loaded');
+    }
+    </script>
+    
     <script src="../assets/js/main.js"></script>
     <script src="../assets/js/products.js"></script>
     <script>
