@@ -122,7 +122,28 @@ $search = isset($_GET['search']) ? htmlspecialchars($_GET['search']) : '';
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
-    <script src="../assets/js/firebase.js"></script>
+    
+    <script>
+    // Firebase configuration
+    const firebaseConfig = {
+        apiKey: "<?php echo getenv('FIREBASE_API_KEY'); ?>",
+        authDomain: "greentrade-project.firebaseapp.com",
+        projectId: "greentrade-project",
+        storageBucket: "greentrade-project.firebasestorage.app",
+        messagingSenderId: "582047266659",
+        appId: "1:582047266659:web:47054d9178fbd66f0d8556",
+        measurementId: "G-M2FMJ35F4K"
+    };
+    
+    // Initialize Firebase
+    if (typeof firebase !== 'undefined') {
+        firebase.initializeApp(firebaseConfig);
+        console.log('Firebase initialized successfully');
+    } else {
+        console.error('Firebase SDK not loaded');
+    }
+    </script>
+    
     <script src="../assets/js/main.js"></script>
     <script src="../assets/js/cart.js"></script>
     <script>
@@ -200,31 +221,39 @@ $search = isset($_GET['search']) ? htmlspecialchars($_GET['search']) : '';
                         const card = document.createElement('div');
                         card.className = 'card h-100';
                         
-                        // Default image placeholders based on category
+                        // Check if product has base64 image data
+                        const hasImage = product.imageData ? true : false;
+                        
+                        // Default image placeholders based on category if no image data
                         let imagePlaceholder = '';
-                        switch(product.category) {
-                            case 'Vegetables':
-                                imagePlaceholder = 'https://cdn.jsdelivr.net/npm/feather-icons/dist/icons/leaf.svg';
-                                break;
-                            case 'Fruits':
-                                imagePlaceholder = 'https://cdn.jsdelivr.net/npm/feather-icons/dist/icons/fruit.svg';
-                                break;
-                            case 'Rice':
-                                imagePlaceholder = 'https://cdn.jsdelivr.net/npm/feather-icons/dist/icons/package.svg';
-                                break;
-                            case 'Fish':
-                                imagePlaceholder = 'https://cdn.jsdelivr.net/npm/feather-icons/dist/icons/fish.svg';
-                                break;
-                            case 'Meat':
-                                imagePlaceholder = 'https://cdn.jsdelivr.net/npm/feather-icons/dist/icons/meat.svg';
-                                break;
-                            default:
-                                imagePlaceholder = 'https://cdn.jsdelivr.net/npm/feather-icons/dist/icons/box.svg';
+                        if (!hasImage) {
+                            switch(product.category) {
+                                case 'Vegetables':
+                                    imagePlaceholder = 'https://cdn.jsdelivr.net/npm/feather-icons/dist/icons/leaf.svg';
+                                    break;
+                                case 'Fruits':
+                                    imagePlaceholder = 'https://cdn.jsdelivr.net/npm/feather-icons/dist/icons/fruit.svg';
+                                    break;
+                                case 'Rice':
+                                    imagePlaceholder = 'https://cdn.jsdelivr.net/npm/feather-icons/dist/icons/package.svg';
+                                    break;
+                                case 'Fish':
+                                    imagePlaceholder = 'https://cdn.jsdelivr.net/npm/feather-icons/dist/icons/fish.svg';
+                                    break;
+                                case 'Meat':
+                                    imagePlaceholder = 'https://cdn.jsdelivr.net/npm/feather-icons/dist/icons/meat.svg';
+                                    break;
+                                default:
+                                    imagePlaceholder = 'https://cdn.jsdelivr.net/npm/feather-icons/dist/icons/box.svg';
+                            }
                         }
                         
                         card.innerHTML = `
                             <div class="card-img-top bg-light text-center p-3" style="height: 200px; display: flex; align-items: center; justify-content: center;">
-                                <img src="${imagePlaceholder}" alt="${product.name}" style="max-height: 100%; max-width: 100%;">
+                                ${hasImage ? 
+                                    `<img src="${product.imageData}" alt="${product.name}" style="max-height: 100%; max-width: 100%; object-fit: contain;">` : 
+                                    `<img src="${imagePlaceholder}" alt="${product.name}" style="max-height: 100%; max-width: 100%;">`
+                                }
                             </div>
                             <div class="card-body">
                                 <h5 class="card-title">${product.name}</h5>
