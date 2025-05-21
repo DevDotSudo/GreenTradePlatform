@@ -3,20 +3,27 @@
  * This script initializes Firebase for the application
  */
 
-// Firebase configuration - retrieved from PHP
-const firebaseConfig = {
-    apiKey: "AIzaSyCIjDPMvgKVTpleUCYWtMIu-K6bW1gHJZY",
-    authDomain: "greentrade-project.firebaseapp.com",
-    projectId: "greentrade-project",
-    storageBucket: "greentrade-project.firebasestorage.app",
-    messagingSenderId: "582047266659",
-    appId: "1:582047266659:web:47054d9178fbd66f0d8556",
-    measurementId: "G-M2FMJ35F4K"
-};
+// Fetch Firebase config from server-side
+let firebaseConfig = {};
 
-// Initialize Firebase
-if (typeof firebase !== 'undefined') {
-    firebase.initializeApp(firebaseConfig);
+// Use AJAX to get the Firebase config from PHP
+fetch('/includes/get_firebase_config.php')
+    .then(response => response.json())
+    .then(config => {
+        firebaseConfig = config;
+        // Initialize Firebase after config is retrieved
+        if (typeof firebase !== 'undefined') {
+            firebase.initializeApp(firebaseConfig);
+        } else {
+            console.error('Firebase SDK not loaded');
+        }
+    })
+    .catch(error => {
+        console.error('Error loading Firebase config:', error);
+    });
+
+// Already initializing Firebase in the fetch callback above
+// Keeping these functions accessible globally
 } else {
     console.error('Firebase SDK not loaded');
 }

@@ -1,7 +1,7 @@
 <?php
 // Firebase configuration
 $firebaseConfig = [
-    'apiKey' => "AIzaSyCIjDPMvgKVTpleUCYWtMIu-K6bW1gHJZY",
+    'apiKey' => getenv('FIREBASE_API_KEY'),
     'authDomain' => "greentrade-project.firebaseapp.com",
     'projectId' => "greentrade-project",
     'storageBucket' => "greentrade-project.firebasestorage.app",
