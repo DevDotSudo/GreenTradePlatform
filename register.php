@@ -87,8 +87,16 @@ if (isset($_SESSION['user_id'])) {
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     
     <script>
-    // Firebase configuration directly from PHP
-    const firebaseConfig = <?php echo json_encode($firebaseConfig); ?>;
+    // Firebase configuration
+    const firebaseConfig = {
+        apiKey: "<?php echo getenv('FIREBASE_API_KEY'); ?>",
+        authDomain: "greentrade-project.firebaseapp.com",
+        projectId: "greentrade-project",
+        storageBucket: "greentrade-project.firebasestorage.app",
+        messagingSenderId: "582047266659",
+        appId: "1:582047266659:web:47054d9178fbd66f0d8556",
+        measurementId: "G-M2FMJ35F4K"
+    };
     
     // Initialize Firebase
     if (typeof firebase !== 'undefined') {
