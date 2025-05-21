@@ -1,0 +1,89 @@
+<?php
+session_start();
+include 'includes/functions.php';
+
+// If already logged in, redirect to appropriate dashboard
+if (isset($_SESSION['user_id'])) {
+    redirectToDashboard();
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Green Trade</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body class="bg-light">
+    <div class="container">
+        <div class="row justify-content-center mt-5">
+            <div class="col-md-6">
+                <div class="card shadow">
+                    <div class="card-header bg-success text-white text-center">
+                        <h3>Green Trade</h3>
+                        <p class="mb-0">Login to your account</p>
+                    </div>
+                    <div class="card-body">
+                        <div id="login-error" class="alert alert-danger d-none"></div>
+                        <form id="login-form">
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Password</label>
+                                <input type="password" class="form-control" id="password" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Account Type</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="user-type" id="buyer" value="buyer" checked>
+                                    <label class="form-check-label" for="buyer">
+                                        Buyer
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="user-type" id="seller" value="seller">
+                                    <label class="form-check-label" for="seller">
+                                        Seller
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-success">Login</button>
+                            </div>
+                        </form>
+                        <div class="mt-3 text-center">
+                            <p>Don't have an account? <a href="register.php" class="text-success">Register here</a></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <script src="assets/js/firebase.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Login form submission
+            document.getElementById('login-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                const userType = document.querySelector('input[name="user-type"]:checked').value;
+                
+                loginUser(email, password, userType);
+            });
+        });
+    </script>
+</body>
+</html>

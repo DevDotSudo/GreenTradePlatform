@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60">
+  <g fill="none" fill-rule="evenodd">
+    <path fill="#ffffff" d="M0 0h200v60H0z"/>
+    <g transform="translate(10 5)">
+      <path fill="#4CAF50" d="M25 0C11.193 0 0 11.193 0 25s11.193 25 25 25 25-11.193 25-25S38.807 0 25 0zm0 45c-11.046 0-20-8.954-20-20s8.954-20 20-20 20 8.954 20 20-8.954 20-20 20z"/>
+      <path fill="#4CAF50" d="M34.95 21.1c-.15-.36-.5-.6-.9-.6h-8.05v-8.05c0-.4-.24-.75-.6-.9-.36-.15-.77-.07-1.05.2l-12 12c-.27.28-.35.69-.2 1.05.15.36.5.6.9.6h8.05v8.05c0 .4.24.75.6.9.36.15.77.07 1.05-.2l12-12c.27-.28.35-.69.2-1.05z"/>
+      <path fill="#4CAF50" d="M35 24c-.55 0-1 .45-1 1 0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c.55 0 1-.45 1-1s-.45-1-1-1c-6.08 0-11 4.92-11 11s4.92 11 11 11 11-4.92 11-11c0-.55-.45-1-1-1z"/>
+    </g>
+    <text font-family="Arial-BoldMT, Arial" font-size="22" font-weight="bold" fill="#4CAF50" transform="translate(10 5)">
+      <tspan x="60" y="28">Green Trade</tspan>
+    </text>
+  </g>
+</svg>
