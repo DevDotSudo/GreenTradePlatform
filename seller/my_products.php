@@ -164,11 +164,18 @@ $deleted = isset($_GET['deleted']) ? $_GET['deleted'] : '';
                         };
                         
                         const row = document.createElement('tr');
+                        
+                        // Check if product has base64 image data
+                        const hasImage = product.imageData ? true : false;
+                        
                         row.innerHTML = `
                             <td>
                                 <div class="d-flex align-items-center">
-                                    <div class="bg-light rounded text-center p-2 me-3" style="width: 50px; height: 50px;">
-                                        <i data-feather="package" style="width: 24px; height: 24px;"></i>
+                                    <div class="bg-light rounded text-center p-2 me-3" style="width: 60px; height: 60px; overflow: hidden;">
+                                        ${hasImage ? 
+                                            `<img src="${product.imageData}" alt="${product.name}" style="width: 100%; height: 100%; object-fit: cover;">` : 
+                                            `<i data-feather="package" style="width: 24px; height: 24px;"></i>`
+                                        }
                                     </div>
                                     <div>
                                         <h6 class="mb-0">${product.name}</h6>
