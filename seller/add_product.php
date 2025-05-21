@@ -369,7 +369,6 @@ ensureUserLoggedIn('seller');
                     }
                 });
             });
-            });
         });
     </script>
 </body>
