@@ -1,6 +1,7 @@
 <?php
 session_start();
 include 'includes/functions.php';
+include 'includes/firebase_config.php';
 
 // If already logged in, redirect to appropriate dashboard
 if (isset($_SESSION['user_id'])) {
@@ -85,7 +86,18 @@ if (isset($_SESSION['user_id'])) {
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     
-    <script src="assets/js/firebase.js"></script>
+    <script>
+    // Firebase configuration directly from PHP
+    const firebaseConfig = <?php echo json_encode($firebaseConfig); ?>;
+    
+    // Initialize Firebase
+    if (typeof firebase !== 'undefined') {
+        firebase.initializeApp(firebaseConfig);
+        console.log('Firebase initialized successfully');
+    } else {
+        console.error('Firebase SDK not loaded');
+    }
+    </script>
     <script src="assets/js/auth.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {

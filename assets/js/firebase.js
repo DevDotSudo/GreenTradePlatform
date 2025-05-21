@@ -5,6 +5,7 @@
 
 // Fetch Firebase config from server-side
 let firebaseConfig = {};
+let firebaseInitialized = false;
 
 // Use AJAX to get the Firebase config from PHP
 fetch('/includes/get_firebase_config.php')
@@ -14,6 +15,8 @@ fetch('/includes/get_firebase_config.php')
         // Initialize Firebase after config is retrieved
         if (typeof firebase !== 'undefined') {
             firebase.initializeApp(firebaseConfig);
+            firebaseInitialized = true;
+            console.log('Firebase initialized successfully');
         } else {
             console.error('Firebase SDK not loaded');
         }
@@ -21,12 +24,6 @@ fetch('/includes/get_firebase_config.php')
     .catch(error => {
         console.error('Error loading Firebase config:', error);
     });
-
-// Already initializing Firebase in the fetch callback above
-// Keeping these functions accessible globally
-} else {
-    console.error('Firebase SDK not loaded');
-}
 
 // Get the current logged in user
 function getCurrentUser() {

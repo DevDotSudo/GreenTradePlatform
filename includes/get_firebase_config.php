@@ -3,8 +3,9 @@
 header('Content-Type: application/json');
 
 // Include Firebase configuration
-include_once 'firebase_config.php';
+require_once 'firebase_config.php';
 
 // Return Firebase config as JSON
+global $firebaseConfig;
 echo json_encode($firebaseConfig);
 ?>
