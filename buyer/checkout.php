@@ -121,20 +121,16 @@ ensureUserLoggedIn('buyer');
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
     <script src="../assets/js/firebase.js"></script>
     <script src="../assets/js/main.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize Feather icons
             feather.replace();
-            
-            // Load cart items for checkout
+             waitForFirebase(() => {
             loadCheckoutItems();
-            
-            // Place order button click handler
+            });
             document.getElementById('place-order-button').addEventListener('click', function() {
                 placeOrder();
             });

@@ -3,10 +3,8 @@ session_start();
 include '../includes/auth.php';
 include '../includes/functions.php';
 
-// Ensure user is logged in as a seller
 ensureUserLoggedIn('seller');
 
-// Check for success message
 $added = isset($_GET['added']) ? $_GET['added'] : '';
 $updated = isset($_GET['updated']) ? $_GET['updated'] : '';
 $deleted = isset($_GET['deleted']) ? $_GET['deleted'] : '';
@@ -56,7 +54,6 @@ $deleted = isset($_GET['deleted']) ? $_GET['deleted'] : '';
         <div class="card">
             <div class="card-body">
                 <div id="products-container">
-                    <!-- Products will be loaded here -->
                     <div class="text-center py-5" id="loading">
                         <div class="spinner-border text-success" role="status">
                             <span class="visually-hidden">Loading...</span>
@@ -74,8 +71,6 @@ $deleted = isset($_GET['deleted']) ? $_GET['deleted'] : '';
             </div>
         </div>
     </div>
-    
-    <!-- Delete Product Modal -->
     <div class="modal fade" id="deleteProductModal" tabindex="-1" aria-labelledby="deleteProductModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -94,60 +89,31 @@ $deleted = isset($_GET['deleted']) ? $_GET['deleted'] : '';
             </div>
         </div>
     </div>
-    
     <?php include '../includes/footer.php'; ?>
-    
-    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
-    
-    <script>
-    // Firebase configuration
-    const firebaseConfig = {
-        apiKey: "<?php echo getenv('FIREBASE_API_KEY'); ?>",
-        authDomain: "greentrade-project.firebaseapp.com",
-        projectId: "greentrade-project",
-        storageBucket: "greentrade-project.firebasestorage.app",
-        messagingSenderId: "582047266659",
-        appId: "1:582047266659:web:47054d9178fbd66f0d8556",
-        measurementId: "G-M2FMJ35F4K"
-    };
-    
-    // Initialize Firebase
-    if (typeof firebase !== 'undefined') {
-        firebase.initializeApp(firebaseConfig);
-        console.log('Firebase initialized successfully');
-    } else {
-        console.error('Firebase SDK not loaded');
-    }
-    </script>
-    
+    <script src="../assets/js/firebase.js"></script>
     <script src="../assets/js/main.js"></script>
     <script src="../assets/js/products.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize Feather icons
             feather.replace();
-            
-            // Load seller's products
-            loadSellerProducts();
+            waitForFirebase(() => {
+                loadSellerProducts();
+            });
         });
         
-        // Current product for delete modal
         let currentProductId = null;
         
-        // Function to load seller's products
         function loadSellerProducts() {
             const sellerId = '<?php echo $_SESSION['user_id']; ?>';
             const productsContainer = document.getElementById('products-container');
             const loading = document.getElementById('loading');
             const noProducts = document.getElementById('no-products');
             
-            // Get products from Firestore
             firebase.firestore().collection('products')
                 .where('sellerId', '==', sellerId)
                 .orderBy('createdAt', 'desc')

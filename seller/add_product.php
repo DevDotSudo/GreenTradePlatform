@@ -3,7 +3,6 @@ session_start();
 include '../includes/auth.php';
 include '../includes/functions.php';
 
-// Ensure user is logged in as a seller
 ensureUserLoggedIn('seller');
 ?>
 <!DOCTYPE html>
@@ -271,10 +270,8 @@ ensureUserLoggedIn('seller');
                     submitButton.disabled = true;
                     submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Adding Product...';
                     
-                    // Process image if present
                     const imageFile = document.getElementById('image').files[0];
                     const processImageAndSaveProduct = function() {
-                        // Create base product object
                         const product = {
                             name: name,
                             description: description || '',
@@ -292,7 +289,6 @@ ensureUserLoggedIn('seller');
                         firebase.firestore().collection('products').add(product)
                             .then(docRef => {
                                 showToast('Success', 'Product has been added successfully!', 'success');
-                                // Redirect to product list page after a short delay
                                 setTimeout(() => {
                                     window.location.href = 'my_products.php?added=' + docRef.id;
                                 }, 1500);
@@ -308,21 +304,16 @@ ensureUserLoggedIn('seller');
                     };
                     
                     if (imageFile) {
-                        // Convert image to base64
                         const reader = new FileReader();
                         reader.onload = function(e) {
-                            // Process the base64 image
                             const base64Image = e.target.result;
-                            
-                            // Check if image size is not too large for Firestore
-                            if (base64Image.length > 10485760) { // 10MB limit
+                            if (base64Image.length > 1048487) { 
                                 showToast('Image Too Large', 'The image is too large to store. Please use a smaller image.', 'warning');
                                 submitButton.disabled = false;
                                 submitButton.textContent = 'Add Product';
                                 return;
                             }
                             
-                            // Create product object with image
                             const product = {
                                 name: name,
                                 description: description || '',
@@ -337,11 +328,9 @@ ensureUserLoggedIn('seller');
                                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                             };
                             
-                            // Add to Firestore
                             firebase.firestore().collection('products').add(product)
                                 .then(docRef => {
                                     showToast('Success', 'Product has been added successfully!', 'success');
-                                    // Redirect to product list page after a short delay
                                     setTimeout(() => {
                                         window.location.href = 'my_products.php?added=' + docRef.id;
                                     }, 1500);
@@ -349,8 +338,6 @@ ensureUserLoggedIn('seller');
                                 .catch(error => {
                                     console.error("Error adding product: ", error);
                                     showToast('Error', 'Failed to add product. Please try again.', 'danger');
-                                    
-                                    // Re-enable submit button
                                     submitButton.disabled = false;
                                     submitButton.textContent = 'Add Product';
                                 });
@@ -364,7 +351,6 @@ ensureUserLoggedIn('seller');
                         
                         reader.readAsDataURL(imageFile);
                     } else {
-                        // No image to process
                         processImageAndSaveProduct();
                     }
                 });

@@ -3,7 +3,6 @@ session_start();
 include '../includes/auth.php';
 include '../includes/functions.php';
 
-// Ensure user is logged in as a seller
 ensureUserLoggedIn('seller');
 ?>
 <!DOCTYPE html>
@@ -53,7 +52,6 @@ ensureUserLoggedIn('seller');
                     <div class="card-body text-center">
                         <h3 class="card-title">Total Sales</h3>
                         <h1 id="total-sales">₱0.00</h1>
-                        <a href="#" class="btn btn-success">View Reports</a>
                     </div>
                 </div>
             </div>
@@ -83,31 +81,25 @@ ensureUserLoggedIn('seller');
     
     <?php include '../includes/footer.php'; ?>
     
-    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
     <script src="../assets/js/firebase.js"></script>
     <script src="../assets/js/main.js"></script>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize Feather icons
             feather.replace();
-            
-            // Load dashboard data
-            loadDashboardData();
-            
-            // Load recent orders
-            loadRecentOrders();
+            waitForFirebase(() => {
+                loadDashboardData();
+                loadRecentOrders();
+            });
         });
         
-        // Function to load dashboard data
         function loadDashboardData() {
             const sellerId = '<?php echo $_SESSION['user_id']; ?>';
             
-            // Get product count
             firebase.firestore().collection('products')
                 .where('sellerId', '==', sellerId)
                 .get()
@@ -118,49 +110,36 @@ ensureUserLoggedIn('seller');
                     console.error("Error getting product count: ", error);
                 });
             
-            // Get pending orders count
             firebase.firestore().collection('orders')
                 .where('status', '==', 'Pending')
                 .get()
                 .then(snapshot => {
-                    // Filter orders to only include those with items from this seller
                     let pendingCount = 0;
-                    
                     snapshot.forEach(doc => {
                         const order = doc.data();
-                        
-                        // Check if any items in the order belong to this seller
-                        const hasSellerItems = order.items.some(item => item.sellerId === sellerId);
-                        
-                        if (hasSellerItems) {
+                        if (order.items.some(item => item.sellerId === sellerId)) {
                             pendingCount++;
                         }
                     });
-                    
                     document.getElementById('pending-orders-count').textContent = pendingCount;
                 })
                 .catch(error => {
                     console.error("Error getting pending orders count: ", error);
                 });
             
-            // Get total sales
             firebase.firestore().collection('orders')
                 .where('status', '==', 'Delivered')
                 .get()
                 .then(snapshot => {
                     let totalSales = 0;
-                    
                     snapshot.forEach(doc => {
                         const order = doc.data();
-                        
-                        // Calculate total for this seller's items only
                         order.items.forEach(item => {
                             if (item.sellerId === sellerId) {
                                 totalSales += item.price * item.quantity;
                             }
                         });
                     });
-                    
                     document.getElementById('total-sales').textContent = `₱${totalSales.toFixed(2)}`;
                 })
                 .catch(error => {
@@ -168,48 +147,34 @@ ensureUserLoggedIn('seller');
                 });
         }
         
-        // Function to load recent orders
         function loadRecentOrders() {
             const sellerId = '<?php echo $_SESSION['user_id']; ?>';
             const recentOrdersContainer = document.getElementById('recent-orders-container');
             const loading = document.getElementById('loading');
             const noOrders = document.getElementById('no-orders');
             
-            // Get recent orders from Firestore
             firebase.firestore().collection('orders')
                 .orderBy('orderDate', 'desc')
                 .limit(5)
                 .get()
                 .then(snapshot => {
                     loading.style.display = 'none';
-                    
                     if (snapshot.empty) {
                         noOrders.classList.remove('d-none');
                         return;
                     }
                     
-                    // Filter orders to only include those with items from this seller
                     const relevantOrders = [];
-                    
                     snapshot.forEach(doc => {
-                        const order = {
-                            id: doc.id,
-                            ...doc.data()
-                        };
-                        
-                        // Check if any items in the order belong to this seller
+                        const order = { id: doc.id, ...doc.data() };
                         const sellerItems = order.items.filter(item => item.sellerId === sellerId);
-                        
                         if (sellerItems.length > 0) {
-                            // Calculate total for this seller's items only
                             let sellerTotal = 0;
                             sellerItems.forEach(item => {
                                 sellerTotal += item.price * item.quantity;
                             });
-                            
                             order.sellerItems = sellerItems;
                             order.sellerTotal = sellerTotal;
-                            
                             relevantOrders.push(order);
                         }
                     });
@@ -219,78 +184,52 @@ ensureUserLoggedIn('seller');
                         return;
                     }
                     
-                    // Clear container and create order elements
                     recentOrdersContainer.innerHTML = '';
-                    
-                    // Create orders table
                     const table = document.createElement('table');
                     table.className = 'table table-hover';
-                    
-                    const tableHead = document.createElement('thead');
-                    tableHead.innerHTML = `
-                        <tr>
-                            <th>Order ID</th>
-                            <th>Date</th>
-                            <th>Customer</th>
-                            <th>Items</th>
-                            <th>Total</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                        </tr>
+                    table.innerHTML = `
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Date</th>
+                                <th>Customer</th>
+                                <th>Items</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${relevantOrders.map(order => `
+                                <tr>
+                                    <td>#${order.id.substring(0, 8)}</td>
+                                    <td>${new Date(order.orderDate.toDate()).toLocaleDateString()}</td>
+                                    <td>${order.buyerName}</td>
+                                    <td>${order.sellerItems.length}</td>
+                                    <td>₱${order.sellerTotal.toFixed(2)}</td>
+                                    <td><span class="badge ${getStatusBadgeClass(order.status)}">${order.status}</span></td>
+                                    <td><a href="orders.php?id=${order.id}" class="btn btn-sm btn-outline-success">View</a></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
                     `;
-                    
-                    const tableBody = document.createElement('tbody');
-                    
-                    relevantOrders.forEach(order => {
-                        const orderDate = new Date(order.orderDate.toDate()).toLocaleDateString();
-                        
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>#${order.id.substring(0, 8)}</td>
-                            <td>${orderDate}</td>
-                            <td>${order.buyerName}</td>
-                            <td>${order.sellerItems.length}</td>
-                            <td>₱${order.sellerTotal.toFixed(2)}</td>
-                            <td><span class="badge ${getStatusBadgeClass(order.status)}">${order.status}</span></td>
-                            <td>
-                                <a href="orders.php?id=${order.id}" class="btn btn-sm btn-outline-success">View</a>
-                            </td>
-                        `;
-                        
-                        tableBody.appendChild(row);
-                    });
-                    
-                    table.appendChild(tableHead);
-                    table.appendChild(tableBody);
                     recentOrdersContainer.appendChild(table);
                 })
                 .catch(error => {
                     loading.style.display = 'none';
                     console.error("Error getting recent orders: ", error);
-                    
-                    recentOrdersContainer.innerHTML = `
-                        <div class="alert alert-danger">
-                            Error loading recent orders. Please try again later.
-                        </div>
-                    `;
+                    recentOrdersContainer.innerHTML = `<div class="alert alert-danger">Error loading recent orders. Please try again later.</div>`;
                 });
         }
         
-        // Helper function to get status badge class
         function getStatusBadgeClass(status) {
             switch(status) {
-                case 'Pending':
-                    return 'bg-warning';
-                case 'Processing':
-                    return 'bg-info';
-                case 'Out for Delivery':
-                    return 'bg-primary';
-                case 'Delivered':
-                    return 'bg-success';
-                case 'Cancelled':
-                    return 'bg-danger';
-                default:
-                    return 'bg-secondary';
+                case 'Pending': return 'bg-warning';
+                case 'Processing': return 'bg-info';
+                case 'Out for Delivery': return 'bg-primary';
+                case 'Delivered': return 'bg-success';
+                case 'Cancelled': return 'bg-danger';
+                default: return 'bg-secondary';
             }
         }
     </script>

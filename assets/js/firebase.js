@@ -1,68 +1,84 @@
-/**
- * Firebase Configuration and Initialization
- * This script initializes Firebase for the application
- */
-
-// Fetch Firebase config from server-side
 let firebaseConfig = {};
 let firebaseInitialized = false;
+let firebaseApp = null;
 
-// Use AJAX to get the Firebase config from PHP
 fetch('/includes/get_firebase_config.php')
     .then(response => response.json())
     .then(config => {
         firebaseConfig = config;
-        // Initialize Firebase after config is retrieved
-        if (typeof firebase !== 'undefined') {
-            firebase.initializeApp(firebaseConfig);
+        if (typeof firebase !== 'undefined' && firebase.apps.length === 0) {
+            firebaseApp = firebase.initializeApp(firebaseConfig);
             firebaseInitialized = true;
-            console.log('Firebase initialized successfully');
+            console.log('✅ Firebase initialized successfully');
+            document.dispatchEvent(new Event('firebase-ready'));
+        } else if (firebase.apps.length > 0) {
+            firebaseApp = firebase.apps[0];
+            firebaseInitialized = true;
+            console.log('ℹ️ Firebase already initialized');
+            document.dispatchEvent(new Event('firebase-ready'));
         } else {
-            console.error('Firebase SDK not loaded');
+            console.error('❌ Firebase SDK not loaded');
         }
     })
     .catch(error => {
         console.error('Error loading Firebase config:', error);
     });
 
-// Get the current logged in user
+function waitForFirebase(cb) {
+    if (firebaseInitialized) {
+        cb();
+    } else {
+        document.addEventListener('firebase-ready', cb);
+    }
+}
+
 function getCurrentUser() {
     return new Promise((resolve, reject) => {
-        const unsubscribe = firebase.auth().onAuthStateChanged(user => {
-            unsubscribe();
-            resolve(user);
-        }, reject);
+        waitForFirebase(() => {
+            const unsubscribe = firebase.auth().onAuthStateChanged(user => {
+                unsubscribe();
+                resolve(user);
+            }, reject);
+        });
     });
 }
 
-// Check if user is authenticated
 function checkAuth() {
     return new Promise((resolve, reject) => {
-        firebase.auth().onAuthStateChanged(user => {
-            if (user) {
-                // User is signed in
-                resolve(user);
-            } else {
-                // No user is signed in
-                reject(new Error('User not authenticated'));
-            }
+        waitForFirebase(() => {
+            firebase.auth().onAuthStateChanged(user => {
+                if (user) {
+                    resolve(user);
+                } else {
+                    reject(new Error('User not authenticated'));
+                }
+            });
         });
     });
 }
 
-// Get user profile from Firestore
 function getUserProfile(userId) {
-    return firebase.firestore().collection('users').doc(userId).get()
-        .then(doc => {
-            if (doc.exists) {
-                return doc.data();
-            } else {
-                throw new Error('User profile not found');
-            }
+    return new Promise((resolve, reject) => {
+        waitForFirebase(() => {
+            firebase.firestore().collection('users').doc(userId).get()
+                .then(doc => {
+                    if (doc.exists) {
+                        resolve(doc.data());
+                    } else {
+                        reject(new Error('User profile not found'));
+                    }
+                })
+                .catch(reject);
         });
+    });
 }
 
-// Create or update user profile in Firestore
 function updateUserProfile(userId, userData) {
-    return firebase.firestore().collection('users').doc(userId).set(userData, { merge: true });
+    return new Promise((resolve, reject) => {
+        waitForFirebase(() => {
+            firebase.firestore().collection('users').doc(userId).set(userData, { merge: true })
+                .then(resolve)
+                .catch(reject);
+        });
+    });
 }

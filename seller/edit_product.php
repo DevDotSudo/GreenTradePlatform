@@ -3,13 +3,10 @@ session_start();
 include '../includes/auth.php';
 include '../includes/functions.php';
 
-// Ensure user is logged in as a seller
 ensureUserLoggedIn('seller');
 
-// Get product ID from URL
 $productId = isset($_GET['id']) ? htmlspecialchars($_GET['id']) : '';
 
-// Redirect if no product ID is provided
 if (!$productId) {
     header('Location: my_products.php');
     exit();
@@ -117,33 +114,28 @@ if (!$productId) {
     
     <?php include '../includes/footer.php'; ?>
     
-    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
     <script src="../assets/js/firebase.js"></script>
     <script src="../assets/js/main.js"></script>
     <script src="../assets/js/products.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize Feather icons
             feather.replace();
-            
-            // Load product details
-            loadProductDetails('<?php echo $productId; ?>');
+            waitForFirebase(() => {
+                loadProductDetails('<?php echo $productId; ?>');
+            });
         });
         
-        // Function to load product details
         function loadProductDetails(productId) {
             const sellerId = '<?php echo $_SESSION['user_id']; ?>';
             const loadingElement = document.getElementById('loading');
             const formElement = document.getElementById('edit-product-form');
             const errorElement = document.getElementById('error-message');
             
-            // Get product from Firestore
             firebase.firestore().collection('products').doc(productId).get()
                 .then(doc => {
                     loadingElement.style.display = 'none';

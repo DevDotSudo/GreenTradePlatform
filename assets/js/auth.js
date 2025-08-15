@@ -1,23 +1,7 @@
-/**
- * Authentication Functions
- * This script handles user authentication functionalities
- */
-
-// Function to register a new user
 function registerUser(email, password, name, phone, address, userType) {
-    const errorElement = document.getElementById('register-error');
-    
-    // Clear previous errors
-    errorElement.textContent = '';
-    errorElement.classList.add('d-none');
-    
-    // Create user with Firebase Authentication
     firebase.auth().createUserWithEmailAndPassword(email, password)
         .then((userCredential) => {
-            // Get user ID
             const user = userCredential.user;
-            
-            // Create user profile in Firestore
             return firebase.firestore().collection('users').doc(user.uid).set({
                 email: email,
                 name: name,
@@ -27,7 +11,6 @@ function registerUser(email, password, name, phone, address, userType) {
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             })
             .then(() => {
-                // Create session via AJAX
                 return fetch('/includes/create_session.php', {
                     method: 'POST',
                     headers: {
@@ -46,47 +29,65 @@ function registerUser(email, password, name, phone, address, userType) {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Redirect to appropriate dashboard
-                    window.location.href = userType === 'buyer' ? '/buyer/dashboard.php' : '/seller/dashboard.php';
+                    showToast({
+                        title: 'Success',
+                        message: 'Account created successfully! Redirecting...',
+                        type: 'success',
+                        duration: 2000
+                    });
+                    
+                    setTimeout(() => {
+                        window.location.href = userType === 'buyer' ? '/buyer/dashboard.php' : '/seller/dashboard.php';
+                    }, 2000);
                 } else {
                     throw new Error(data.message || 'Failed to create session');
                 }
             });
         })
         .catch((error) => {
-            // Handle errors
             console.error("Registration error:", error);
-            errorElement.textContent = error.message;
-            errorElement.classList.remove('d-none');
+            
+            let errorMessage = 'An error occurred during registration.';
+            
+            // Handle specific Firebase auth errors
+            switch (error.code) {
+                case 'auth/email-already-in-use':
+                    errorMessage = 'This email is already registered. Please use a different email or try logging in.';
+                    break;
+                case 'auth/invalid-email':
+                    errorMessage = 'Please enter a valid email address.';
+                    break;
+                case 'auth/weak-password':
+                    errorMessage = 'Password should be at least 6 characters long.';
+                    break;
+                case 'auth/operation-not-allowed':
+                    errorMessage = 'Email/password accounts are not enabled. Please contact support.';
+                    break;
+                default:
+                    errorMessage = error.message || errorMessage;
+            }
+            
+            showToast({
+                title: 'Registration Failed',
+                message: errorMessage,
+                type: 'error'
+            });
         });
 }
 
-// Function to login a user
 function loginUser(email, password, userType) {
-    const errorElement = document.getElementById('login-error');
-    
-    // Clear previous errors
-    errorElement.textContent = '';
-    errorElement.classList.add('d-none');
-    
-    // Sign in with Firebase Authentication
     firebase.auth().signInWithEmailAndPassword(email, password)
         .then((userCredential) => {
-            // Get user ID
             const user = userCredential.user;
-            
-            // Get user profile from Firestore
             return firebase.firestore().collection('users').doc(user.uid).get()
                 .then(doc => {
                     if (doc.exists) {
                         const userData = doc.data();
                         
-                        // Check if user type matches
                         if (userData.userType !== userType) {
                             throw new Error(`This account is registered as a ${userData.userType}, not a ${userType}`);
                         }
                         
-                        // Create session via AJAX
                         return fetch('/includes/create_session.php', {
                             method: 'POST',
                             headers: {
@@ -108,40 +109,137 @@ function loginUser(email, password, userType) {
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // Redirect to appropriate dashboard
-                        window.location.href = userType === 'buyer' ? '/buyer/dashboard.php' : '/seller/dashboard.php';
+                        showToast({
+                            title: 'Welcome Back!',
+                            message: `Welcome back, ${userData.name}! Redirecting...`,
+                            type: 'success',
+                            duration: 2000
+                        });
+                        
+                        setTimeout(() => {
+                            window.location.href = userType === 'buyer' ? '/buyer/dashboard.php' : '/seller/dashboard.php';
+                        }, 2000);
                     } else {
                         throw new Error(data.message || 'Failed to create session');
                     }
                 });
         })
         .catch((error) => {
-            // Handle errors
             console.error("Login error:", error);
-            errorElement.textContent = error.message;
-            errorElement.classList.remove('d-none');
+            
+            let errorMessage = 'An error occurred during login.';
+            
+            // Handle specific Firebase auth errors
+            switch (error.code) {
+                case 'auth/user-not-found':
+                    errorMessage = 'No account found with this email address. Please check your email or create a new account.';
+                    break;
+                case 'auth/wrong-password':
+                    errorMessage = 'Incorrect password. Please try again.';
+                    break;
+                case 'auth/invalid-email':
+                    errorMessage = 'Please enter a valid email address.';
+                    break;
+                case 'auth/user-disabled':
+                    errorMessage = 'This account has been disabled. Please contact support.';
+                    break;
+                case 'auth/too-many-requests':
+                    errorMessage = 'Too many failed login attempts. Please try again later.';
+                    break;
+                default:
+                    errorMessage = error.message || errorMessage;
+            }
+            
+            showToast({
+                title: 'Login Failed',
+                message: errorMessage,
+                type: 'error'
+            });
         });
 }
 
-// Function to log out a user
 function logoutUser() {
-    firebase.auth().signOut()
-        .then(() => {
-            // Sign-out successful, redirect to logout page
-            window.location.href = '/logout.php';
-        })
-        .catch((error) => {
-            // An error happened
-            console.error("Logout error:", error);
-            alert('Error logging out. Please try again.');
-        });
+    showConfirm({
+        title: 'Confirm Logout',
+        message: 'Are you sure you want to log out?',
+        type: 'warning',
+        confirmText: 'Logout',
+        cancelText: 'Cancel',
+        onConfirm: () => {
+            firebase.auth().signOut()
+                .then(() => {
+                    showToast({
+                        title: 'Logged Out',
+                        message: 'You have been successfully logged out.',
+                        type: 'success',
+                        duration: 2000
+                    });
+                    
+                    setTimeout(() => {
+                        window.location.href = '/logout.php';
+                    }, 2000);
+                })
+                .catch((error) => {
+                    console.error("Logout error:", error);
+                    showToast({
+                        title: 'Error',
+                        message: 'Error logging out. Please try again.',
+                        type: 'error'
+                    });
+                });
+        }
+    });
 }
 
-// Helper function to show error messages
 function showError(elementId, message) {
     const element = document.getElementById(elementId);
     if (element) {
         element.textContent = message;
         element.classList.remove('d-none');
+    }
+}
+
+// Enhanced error handling for form validation
+function validateForm(formData) {
+    const errors = [];
+    
+    if (!formData.email || !formData.email.includes('@')) {
+        errors.push('Please enter a valid email address.');
+    }
+    
+    if (!formData.password || formData.password.length < 6) {
+        errors.push('Password must be at least 6 characters long.');
+    }
+    
+    if (!formData.name || formData.name.trim().length < 2) {
+        errors.push('Please enter your full name.');
+    }
+    
+    if (formData.phone && !/^[\+]?[1-9][\d]{0,15}$/.test(formData.phone.replace(/\s/g, ''))) {
+        errors.push('Please enter a valid phone number.');
+    }
+    
+    if (!formData.address || formData.address.trim().length < 10) {
+        errors.push('Please enter your complete address.');
+    }
+    
+    return errors;
+}
+
+// Show validation errors
+function showValidationErrors(errors) {
+    if (errors.length === 1) {
+        showToast({
+            title: 'Validation Error',
+            message: errors[0],
+            type: 'warning'
+        });
+    } else {
+        showAlert({
+            title: 'Validation Errors',
+            message: errors.join('\n'),
+            type: 'warning',
+            buttonText: 'OK'
+        });
     }
 }

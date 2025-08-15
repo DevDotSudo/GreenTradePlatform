@@ -2,11 +2,7 @@
 session_start();
 include '../includes/auth.php';
 include '../includes/functions.php';
-
-// Ensure user is logged in as a buyer
 ensureUserLoggedIn('buyer');
-
-// Check if viewing a specific order
 $orderId = isset($_GET['id']) ? htmlspecialchars($_GET['id']) : '';
 ?>
 <!DOCTYPE html>
@@ -24,7 +20,6 @@ $orderId = isset($_GET['id']) ? htmlspecialchars($_GET['id']) : '';
     
     <div class="container mt-4">
         <?php if ($orderId): ?>
-            <!-- Single Order View -->
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h1>Order Details</h1>
                 <a href="orders.php" class="btn btn-outline-success">
@@ -133,7 +128,6 @@ $orderId = isset($_GET['id']) ? htmlspecialchars($_GET['id']) : '';
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
     <script src="../assets/js/firebase.js"></script>
@@ -143,6 +137,7 @@ $orderId = isset($_GET['id']) ? htmlspecialchars($_GET['id']) : '';
             // Initialize Feather icons
             feather.replace();
             
+            waitForFirebase(() => {
             <?php if ($orderId): ?>
                 // Load single order details
                 loadOrderDetails('<?php echo $orderId; ?>');
@@ -158,6 +153,7 @@ $orderId = isset($_GET['id']) ? htmlspecialchars($_GET['id']) : '';
                     });
                 });
             <?php endif; ?>
+            });
         });
         
         <?php if ($orderId): ?>

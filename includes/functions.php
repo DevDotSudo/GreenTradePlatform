@@ -1,8 +1,6 @@
 <?php
-// Include Firebase config
 include_once __DIR__ . '/firebase_config.php';
 
-// Redirect to appropriate dashboard based on user type
 function redirectToDashboard() {
     if ($_SESSION['user_type'] === 'buyer') {
         header("Location: /buyer/dashboard.php");
@@ -13,22 +11,18 @@ function redirectToDashboard() {
     }
 }
 
-// Display error message
 function showError($message) {
     echo '<div class="alert alert-danger">' . htmlspecialchars($message) . '</div>';
 }
 
-// Display success message
 function showSuccess($message) {
     echo '<div class="alert alert-success">' . htmlspecialchars($message) . '</div>';
 }
 
-// Format price to Philippine Peso
 function formatPrice($price) {
     return '₱' . number_format($price, 2);
 }
 
-// Sanitize input
 function sanitizeInput($data) {
     $data = trim($data);
     $data = stripslashes($data);
@@ -36,12 +30,10 @@ function sanitizeInput($data) {
     return $data;
 }
 
-// Validate email
 function validateEmail($email) {
     return filter_var($email, FILTER_VALIDATE_EMAIL);
 }
 
-// Get product categories
 function getProductCategories() {
     return [
         'Vegetables',

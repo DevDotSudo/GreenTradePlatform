@@ -2,7 +2,6 @@
 session_start();
 include 'includes/functions.php';
 
-// Redirect to appropriate dashboard if already logged in
 if (isset($_SESSION['user_id'])) {
     if ($_SESSION['user_type'] === 'buyer') {
         header("Location: buyer/dashboard.php");
@@ -13,7 +12,6 @@ if (isset($_SESSION['user_id'])) {
     }
 }
 
-// Otherwise, redirect to login page
 header("Location: login.php");
 exit();
 ?>

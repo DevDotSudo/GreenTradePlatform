@@ -32,7 +32,6 @@ ensureUserLoggedIn('buyer');
                 <div class="card mb-4">
                     <div class="card-body">
                         <div id="cart-items-container">
-                            <!-- Cart items will be loaded here -->
                             <div class="text-center py-5" id="loading">
                                 <div class="spinner-border text-success" role="status">
                                     <span class="visually-hidden">Loading...</span>
@@ -70,7 +69,7 @@ ensureUserLoggedIn('buyer');
                             <strong>Total</strong>
                             <strong id="total">₱50.00</strong>
                         </div>
-                        <button id="checkout-button" class="btn btn-success w-100">Proceed to Checkout</button>
+                        <button id="checkout-button" class="btn btn-success w-100" disabled>Proceed to Checkout</button>
                     </div>
                 </div>
             </div>
@@ -88,18 +87,21 @@ ensureUserLoggedIn('buyer');
     <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
     <script src="../assets/js/firebase.js"></script>
     <script src="../assets/js/main.js"></script>
-    <script src="../assets/js/cart.js"></script>
     <script>
+        // Global variables
+        let currentCartId = null;
+        
+        // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize Feather icons
             feather.replace();
             
-            // Load cart items
-            loadCart();
-            
-            // Checkout button click handler
-            document.getElementById('checkout-button').addEventListener('click', function() {
-                window.location.href = 'checkout.php';
+            waitForFirebase(() => {
+                loadCart();
+                
+                // Checkout button click handler
+                document.getElementById('checkout-button').addEventListener('click', function() {
+                    window.location.href = 'checkout.php';
+                });
             });
         });
         
@@ -111,6 +113,10 @@ ensureUserLoggedIn('buyer');
             const emptyCart = document.getElementById('empty-cart');
             const checkoutButton = document.getElementById('checkout-button');
             
+            loading.style.display = 'block';
+            emptyCart.classList.add('d-none');
+            checkoutButton.disabled = true;
+            
             // Get cart from Firestore
             firebase.firestore().collection('carts')
                 .where('userId', '==', userId)
@@ -120,117 +126,113 @@ ensureUserLoggedIn('buyer');
                     loading.style.display = 'none';
                     
                     if (snapshot.empty) {
-                        emptyCart.classList.remove('d-none');
-                        checkoutButton.disabled = true;
-                        updateOrderSummary(0);
+                        showEmptyCart();
                         return;
                     }
                     
-                    // Get the first (and presumably only) cart document
+                    // Get the cart document
                     const cartDoc = snapshot.docs[0];
+                    currentCartId = cartDoc.id;
                     const cart = cartDoc.data();
                     
                     // Check if cart has items
                     if (!cart.items || cart.items.length === 0) {
-                        emptyCart.classList.remove('d-none');
-                        checkoutButton.disabled = true;
-                        updateOrderSummary(0);
+                        showEmptyCart();
                         return;
                     }
                     
-                    // Clear container
-                    cartItemsContainer.innerHTML = '';
-                    
-                    // Group items by seller
-                    const itemsBySeller = {};
-                    
-                    cart.items.forEach(item => {
-                        if (!itemsBySeller[item.sellerId]) {
-                            itemsBySeller[item.sellerId] = {
-                                sellerName: item.sellerName,
-                                items: []
-                            };
-                        }
-                        
-                        itemsBySeller[item.sellerId].items.push(item);
-                    });
-                    
-                    // Create and append cart item elements grouped by seller
-                    let subtotal = 0;
-                    
-                    Object.keys(itemsBySeller).forEach(sellerId => {
-                        const sellerGroup = itemsBySeller[sellerId];
-                        
-                        // Create seller section
-                        const sellerSection = document.createElement('div');
-                        sellerSection.className = 'mb-3';
-                        sellerSection.innerHTML = `
-                            <h5 class="mb-3">Seller: ${sellerGroup.sellerName}</h5>
-                        `;
-                        
-                        // Create items table
-                        const itemsTable = document.createElement('table');
-                        itemsTable.className = 'table align-middle';
-                        
-                        const tableBody = document.createElement('tbody');
-                        
-                        sellerGroup.items.forEach(item => {
-                            const itemTotal = item.price * item.quantity;
-                            subtotal += itemTotal;
-                            
-                            const tableRow = document.createElement('tr');
-                            tableRow.innerHTML = `
-                                <td width="80">
-                                    <div class="bg-light rounded text-center p-2" style="width: 60px; height: 60px;">
-                                        <i data-feather="package" style="width: 30px; height: 30px;"></i>
-                                    </div>
-                                </td>
-                                <td>
-                                    <h6 class="mb-0">${item.name}</h6>
-                                    <p class="text-muted mb-0">₱${item.price.toFixed(2)} x ${item.quantity}</p>
-                                </td>
-                                <td class="text-end">
-                                    <h6 class="mb-0">₱${itemTotal.toFixed(2)}</h6>
-                                    <button class="btn btn-sm btn-link text-danger remove-item" 
-                                        data-cart-id="${cartDoc.id}" 
-                                        data-product-id="${item.productId}">
-                                        Remove
-                                    </button>
-                                </td>
-                            `;
-                            
-                            tableBody.appendChild(tableRow);
-                        });
-                        
-                        itemsTable.appendChild(tableBody);
-                        sellerSection.appendChild(itemsTable);
-                        cartItemsContainer.appendChild(sellerSection);
-                    });
-                    
-                    // Update order summary
-                    updateOrderSummary(subtotal);
-                    
-                    // Enable checkout button if cart has items
-                    checkoutButton.disabled = false;
-                    
-                    // Add event listeners for remove buttons
-                    document.querySelectorAll('.remove-item').forEach(button => {
-                        button.addEventListener('click', function() {
-                            const cartId = this.getAttribute('data-cart-id');
-                            const productId = this.getAttribute('data-product-id');
-                            
-                            removeFromCart(cartId, productId);
-                        });
-                    });
-                    
-                    // Initialize Feather icons for dynamically added content
-                    feather.replace();
+                    renderCartItems(cartDoc.id, cart.items);
                 })
                 .catch(error => {
                     loading.style.display = 'none';
                     console.error("Error getting cart: ", error);
-                    alert("Error loading cart. Please try again later.");
+                    showError("Error loading cart. Please try again later.");
                 });
+        }
+        
+        // Function to render cart items
+        function renderCartItems(cartId, items) {
+            const cartItemsContainer = document.getElementById('cart-items-container');
+            const checkoutButton = document.getElementById('checkout-button');
+            
+            // Clear container
+            cartItemsContainer.innerHTML = '';
+            
+            // Group items by seller
+            const itemsBySeller = {};
+            let subtotal = 0;
+            
+            items.forEach(item => {
+                if (!itemsBySeller[item.sellerId]) {
+                    itemsBySeller[item.sellerId] = {
+                        sellerName: item.sellerName,
+                        items: []
+                    };
+                }
+                
+                itemsBySeller[item.sellerId].items.push(item);
+                subtotal += item.price * item.quantity;
+            });
+            
+            // Create and append cart item elements grouped by seller
+            Object.keys(itemsBySeller).forEach(sellerId => {
+                const sellerGroup = itemsBySeller[sellerId];
+                
+                // Create seller section
+                const sellerSection = document.createElement('div');
+                sellerSection.className = 'mb-4';
+                sellerSection.innerHTML = `
+                    <h5 class="mb-3">Seller: ${sellerGroup.sellerName}</h5>
+                    <table class="table align-middle">
+                        <tbody>
+                            ${sellerGroup.items.map(item => {
+                                const itemTotal = item.price * item.quantity;
+                                return `
+                                    <tr>
+                                        <td width="80">
+                                            <div class="bg-light rounded text-center p-2" style="width: 60px; height: 60px;">
+                                                <img src="${item.imageUrl || '../assets/svg/package.svg'}" 
+                                                     alt="${item.name}" 
+                                                     style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <h6 class="mb-0">${item.name}</h6>
+                                            <p class="text-muted mb-0">₱${item.price.toFixed(2)} x ${item.quantity}</p>
+                                        </td>
+                                        <td class="text-end">
+                                            <h6 class="mb-0">₱${itemTotal.toFixed(2)}</h6>
+                                            <button class="btn btn-sm btn-link text-danger remove-item" 
+                                                data-product-id="${item.productId}">
+                                                Remove
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                `;
+                
+                cartItemsContainer.appendChild(sellerSection);
+            });
+            
+            // Update order summary
+            updateOrderSummary(subtotal);
+            
+            // Enable checkout button
+            checkoutButton.disabled = false;
+            
+            // Add event listeners for remove buttons
+            document.querySelectorAll('.remove-item').forEach(button => {
+                button.addEventListener('click', function() {
+                    const productId = this.getAttribute('data-product-id');
+                    removeFromCart(currentCartId, productId);
+                });
+            });
+            
+            // Initialize Feather icons for dynamically added content
+            feather.replace();
         }
         
         // Function to update order summary
@@ -245,9 +247,11 @@ ensureUserLoggedIn('buyer');
         
         // Function to remove item from cart
         function removeFromCart(cartId, productId) {
-            const userId = '<?php echo $_SESSION['user_id']; ?>';
+            if (!cartId) return;
             
-            // Get the cart document
+            const button = document.querySelector(`.remove-item[data-product-id="${productId}"]`);
+            if (button) button.disabled = true;
+            
             firebase.firestore().collection('carts').doc(cartId).get()
                 .then(doc => {
                     if (!doc.exists) {
@@ -255,26 +259,43 @@ ensureUserLoggedIn('buyer');
                     }
                     
                     const cart = doc.data();
-                    
-                    // Filter out the item to remove
                     const updatedItems = cart.items.filter(item => item.productId !== productId);
                     
-                    // Update the cart document
                     return firebase.firestore().collection('carts').doc(cartId).update({
                         items: updatedItems
                     });
                 })
                 .then(() => {
-                    // Reload the cart
+                    // Reload cart
                     loadCart();
                     
                     // Update cart badge
-                    updateCartBadge();
+                    if (typeof updateCartBadge === 'function') {
+                        updateCartBadge();
+                    }
                 })
                 .catch(error => {
                     console.error("Error removing item from cart: ", error);
-                    alert("Error removing item. Please try again later.");
+                    showError("Error removing item. Please try again later.");
+                    if (button) button.disabled = false;
                 });
+        }
+        
+        // Helper function to show empty cart state
+        function showEmptyCart() {
+            document.getElementById('empty-cart').classList.remove('d-none');
+            document.getElementById('checkout-button').disabled = true;
+            updateOrderSummary(0);
+        }
+        
+        // Helper function to show error message
+        function showError(message) {
+            const cartItemsContainer = document.getElementById('cart-items-container');
+            cartItemsContainer.innerHTML = `
+                <div class="alert alert-danger">
+                    ${message}
+                </div>
+            `;
         }
     </script>
 </body>
