@@ -7,6 +7,7 @@ ensureUserLoggedIn('seller');
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,9 +16,10 @@ ensureUserLoggedIn('seller');
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.css">
     <link rel="stylesheet" href="../assets/css/style.css">
 </head>
+
 <body>
     <?php include '../includes/header.php'; ?>
-    
+
     <div class="container mt-4">
         <div class="card mb-4">
             <div class="card-body">
@@ -25,7 +27,7 @@ ensureUserLoggedIn('seller');
                 <p class="text-muted">This is your seller dashboard where you can manage your products and orders.</p>
             </div>
         </div>
-        
+
         <div class="row">
             <div class="col-md-4 mb-4">
                 <div class="card h-100">
@@ -36,7 +38,7 @@ ensureUserLoggedIn('seller');
                     </div>
                 </div>
             </div>
-            
+
             <div class="col-md-4 mb-4">
                 <div class="card h-100">
                     <div class="card-body text-center">
@@ -46,7 +48,7 @@ ensureUserLoggedIn('seller');
                     </div>
                 </div>
             </div>
-            
+
             <div class="col-md-4 mb-4">
                 <div class="card h-100">
                     <div class="card-body text-center">
@@ -56,19 +58,18 @@ ensureUserLoggedIn('seller');
                 </div>
             </div>
         </div>
-        
+
         <h3 class="mb-3">Recent Orders</h3>
         <div class="card">
             <div class="card-body">
                 <div id="recent-orders-container">
-                    <!-- Recent orders will be loaded here -->
                     <div class="text-center py-5" id="loading">
                         <div class="spinner-border text-success" role="status">
                             <span class="visually-hidden">Loading...</span>
                         </div>
                         <p class="mt-2">Loading recent orders...</p>
                     </div>
-                    
+
                     <div class="text-center py-5 d-none" id="no-orders">
                         <p>No orders yet</p>
                         <p class="text-muted">When customers place orders, they will appear here.</p>
@@ -78,9 +79,9 @@ ensureUserLoggedIn('seller');
             </div>
         </div>
     </div>
-    
+
     <?php include '../includes/footer.php'; ?>
-    
+
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -96,10 +97,10 @@ ensureUserLoggedIn('seller');
                 loadRecentOrders();
             });
         });
-        
+
         function loadDashboardData() {
             const sellerId = '<?php echo $_SESSION['user_id']; ?>';
-            
+
             firebase.firestore().collection('products')
                 .where('sellerId', '==', sellerId)
                 .get()
@@ -109,7 +110,7 @@ ensureUserLoggedIn('seller');
                 .catch(error => {
                     console.error("Error getting product count: ", error);
                 });
-            
+
             firebase.firestore().collection('orders')
                 .where('status', '==', 'Pending')
                 .get()
@@ -126,7 +127,7 @@ ensureUserLoggedIn('seller');
                 .catch(error => {
                     console.error("Error getting pending orders count: ", error);
                 });
-            
+
             firebase.firestore().collection('orders')
                 .where('status', '==', 'Delivered')
                 .get()
@@ -146,13 +147,13 @@ ensureUserLoggedIn('seller');
                     console.error("Error getting total sales: ", error);
                 });
         }
-        
+
         function loadRecentOrders() {
             const sellerId = '<?php echo $_SESSION['user_id']; ?>';
             const recentOrdersContainer = document.getElementById('recent-orders-container');
             const loading = document.getElementById('loading');
             const noOrders = document.getElementById('no-orders');
-            
+
             firebase.firestore().collection('orders')
                 .orderBy('orderDate', 'desc')
                 .limit(5)
@@ -163,10 +164,13 @@ ensureUserLoggedIn('seller');
                         noOrders.classList.remove('d-none');
                         return;
                     }
-                    
+
                     const relevantOrders = [];
                     snapshot.forEach(doc => {
-                        const order = { id: doc.id, ...doc.data() };
+                        const order = {
+                            id: doc.id,
+                            ...doc.data()
+                        };
                         const sellerItems = order.items.filter(item => item.sellerId === sellerId);
                         if (sellerItems.length > 0) {
                             let sellerTotal = 0;
@@ -178,12 +182,12 @@ ensureUserLoggedIn('seller');
                             relevantOrders.push(order);
                         }
                     });
-                    
+
                     if (relevantOrders.length === 0) {
                         noOrders.classList.remove('d-none');
                         return;
                     }
-                    
+
                     recentOrdersContainer.innerHTML = '';
                     const table = document.createElement('table');
                     table.className = 'table table-hover';
@@ -221,17 +225,24 @@ ensureUserLoggedIn('seller');
                     recentOrdersContainer.innerHTML = `<div class="alert alert-danger">Error loading recent orders. Please try again later.</div>`;
                 });
         }
-        
+
         function getStatusBadgeClass(status) {
-            switch(status) {
-                case 'Pending': return 'bg-warning';
-                case 'Processing': return 'bg-info';
-                case 'Out for Delivery': return 'bg-primary';
-                case 'Delivered': return 'bg-success';
-                case 'Cancelled': return 'bg-danger';
-                default: return 'bg-secondary';
+            switch (status) {
+                case 'Pending':
+                    return 'bg-warning';
+                case 'Processing':
+                    return 'bg-info';
+                case 'Out for Delivery':
+                    return 'bg-primary';
+                case 'Delivered':
+                    return 'bg-success';
+                case 'Cancelled':
+                    return 'bg-danger';
+                default:
+                    return 'bg-secondary';
             }
         }
     </script>
 </body>
+
 </html>

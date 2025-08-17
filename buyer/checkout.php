@@ -8,6 +8,7 @@ ensureUserLoggedIn('buyer');
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,18 +17,19 @@ ensureUserLoggedIn('buyer');
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.css">
     <link rel="stylesheet" href="../assets/css/style.css">
 </head>
+
 <body>
     <?php include '../includes/header.php'; ?>
-    
+
     <div class="container mt-4">
         <div class="mb-4">
             <a href="cart.php" class="btn btn-outline-success">
                 <i data-feather="arrow-left" class="me-1"></i> Back to Cart
             </a>
         </div>
-        
+
         <h1 class="mb-4">Checkout</h1>
-        
+
         <div class="row">
             <div class="col-lg-8">
                 <div class="card mb-4">
@@ -55,7 +57,7 @@ ensureUserLoggedIn('buyer');
                         </form>
                     </div>
                 </div>
-                
+
                 <div class="card mb-4">
                     <div class="card-header bg-white">
                         <h5 class="mb-0">Payment Method</h5>
@@ -70,7 +72,7 @@ ensureUserLoggedIn('buyer');
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="card mb-4">
                     <div class="card-header bg-white">
                         <h5 class="mb-0">Order Items</h5>
@@ -88,7 +90,7 @@ ensureUserLoggedIn('buyer');
                     </div>
                 </div>
             </div>
-            
+
             <div class="col-lg-4">
                 <div class="card">
                     <div class="card-header bg-white">
@@ -114,9 +116,9 @@ ensureUserLoggedIn('buyer');
             </div>
         </div>
     </div>
-    
+
     <?php include '../includes/footer.php'; ?>
-    
+
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
@@ -128,183 +130,167 @@ ensureUserLoggedIn('buyer');
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             feather.replace();
-             waitForFirebase(() => {
-            loadCheckoutItems();
+            waitForFirebase(() => {
+                loadCheckoutItems();
             });
             document.getElementById('place-order-button').addEventListener('click', function() {
                 placeOrder();
             });
         });
-        
+
         // Global variables
         let cartItems = [];
         let cartId = '';
         let subtotalAmount = 0;
-        
-        // Function to load checkout items
+
         function loadCheckoutItems() {
             const userId = '<?php echo $_SESSION['user_id']; ?>';
             const checkoutItemsContainer = document.getElementById('checkout-items-container');
             const loading = document.getElementById('loading');
             const placeOrderButton = document.getElementById('place-order-button');
-            
-            // Get cart from Firestore
+
             firebase.firestore().collection('carts')
                 .where('userId', '==', userId)
                 .limit(1)
                 .get()
                 .then(snapshot => {
                     loading.style.display = 'none';
-                    
+
                     if (snapshot.empty) {
                         checkoutItemsContainer.innerHTML = `
-                            <div class="alert alert-warning">
-                                Your cart is empty. Please add items to your cart before checkout.
-                            </div>
-                        `;
+                    <div class="alert alert-warning">
+                        Your cart is empty. Please add items to your cart before checkout.
+                    </div>
+                `;
                         placeOrderButton.disabled = true;
                         return;
                     }
-                    
-                    // Get the first (and presumably only) cart document
+
                     const cartDoc = snapshot.docs[0];
                     cartId = cartDoc.id;
                     const cart = cartDoc.data();
-                    
-                    // Check if cart has items
-                    if (!cart.items || cart.items.length === 0) {
+
+                    // If Firestore stores a single product directly
+                    let itemsArray = [];
+                    if (Array.isArray(cart.items)) {
+                        itemsArray = cart.items;
+                    } else {
+                        // Convert single item object to array
+                        itemsArray = [cart];
+                    }
+
+                    if (itemsArray.length === 0) {
                         checkoutItemsContainer.innerHTML = `
-                            <div class="alert alert-warning">
-                                Your cart is empty. Please add items to your cart before checkout.
-                            </div>
-                        `;
+                    <div class="alert alert-warning">
+                        Your cart is empty. Please add items to your cart before checkout.
+                    </div>
+                `;
                         placeOrderButton.disabled = true;
                         return;
                     }
-                    
-                    // Store cart items for order placement
-                    cartItems = cart.items;
-                    
-                    // Group items by seller
+
+                    cartItems = itemsArray;
+
+                    // Group by seller
                     const itemsBySeller = {};
-                    
-                    cart.items.forEach(item => {
+                    itemsArray.forEach(item => {
                         if (!itemsBySeller[item.sellerId]) {
                             itemsBySeller[item.sellerId] = {
                                 sellerName: item.sellerName,
                                 items: []
                             };
                         }
-                        
                         itemsBySeller[item.sellerId].items.push(item);
                     });
-                    
-                    // Create and append checkout item elements grouped by seller
+
                     subtotalAmount = 0;
                     checkoutItemsContainer.innerHTML = '';
-                    
+
                     Object.keys(itemsBySeller).forEach(sellerId => {
                         const sellerGroup = itemsBySeller[sellerId];
-                        
-                        // Create seller section
                         const sellerSection = document.createElement('div');
                         sellerSection.className = 'mb-3';
                         sellerSection.innerHTML = `
-                            <h6 class="mb-3">From Seller: ${sellerGroup.sellerName}</h6>
-                        `;
-                        
-                        // Create items table
+                    <h6 class="mb-3">From Seller: ${sellerGroup.sellerName}</h6>
+                `;
+
                         const itemsTable = document.createElement('table');
                         itemsTable.className = 'table table-sm align-middle';
-                        
                         const tableBody = document.createElement('tbody');
-                        
+
                         sellerGroup.items.forEach(item => {
                             const itemTotal = item.price * item.quantity;
                             subtotalAmount += itemTotal;
-                            
+
                             const tableRow = document.createElement('tr');
                             tableRow.innerHTML = `
-                                <td width="60">
-                                    <div class="bg-light rounded text-center p-2" style="width: 40px; height: 40px;">
-                                        <i data-feather="package" style="width: 20px; height: 20px;"></i>
-                                    </div>
-                                </td>
-                                <td>
-                                    <h6 class="mb-0">${item.name}</h6>
-                                    <p class="text-muted mb-0 small">₱${item.price.toFixed(2)} x ${item.quantity}</p>
-                                </td>
-                                <td class="text-end">₱${itemTotal.toFixed(2)}</td>
-                            `;
-                            
+                        <td width="60">
+                            <div class="bg-light rounded text-center p-2" style="width: 40px; height: 40px;">
+                                <img src="${item.imageUrl || '../assets/svg/package.svg'}" 
+                                     alt="${item.productName || 'Product'}" 
+                                     style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                            </div>
+                        </td>
+                        <td>
+                            <h6 class="mb-0">${item.productName || 'Unnamed Product'}</h6>
+                            <p class="text-muted mb-0 small">₱${item.price.toFixed(2)} x ${item.quantity}</p>
+                        </td>
+                        <td class="text-end">₱${itemTotal.toFixed(2)}</td>
+                    `;
                             tableBody.appendChild(tableRow);
                         });
-                        
+
                         itemsTable.appendChild(tableBody);
                         sellerSection.appendChild(itemsTable);
                         checkoutItemsContainer.appendChild(sellerSection);
                     });
-                    
-                    // Update order summary
+
                     updateOrderSummary(subtotalAmount);
-                    
-                    // Initialize Feather icons for dynamically added content
-                    feather.replace();
                 })
                 .catch(error => {
                     loading.style.display = 'none';
                     console.error("Error getting cart: ", error);
-                    
                     checkoutItemsContainer.innerHTML = `
-                        <div class="alert alert-danger">
-                            Error loading cart items. Please try again later.
-                        </div>
-                    `;
-                    
+                <div class="alert alert-danger">
+                    Error loading cart items. Please try again later.
+                </div>
+            `;
                     placeOrderButton.disabled = true;
                 });
         }
-        
-        // Function to update order summary
+
         function updateOrderSummary(subtotal) {
-            const deliveryFee = 50; // Fixed delivery fee
+            const deliveryFee = 50;
             const total = subtotal + deliveryFee;
-            
+
             document.getElementById('subtotal').textContent = `₱${subtotal.toFixed(2)}`;
             document.getElementById('delivery-fee').textContent = `₱${deliveryFee.toFixed(2)}`;
             document.getElementById('total').textContent = `₱${total.toFixed(2)}`;
         }
-        
-        // Function to place order
+
         function placeOrder() {
-            // Check if cart is empty
             if (cartItems.length === 0) {
                 alert('Your cart is empty. Please add items to your cart before placing an order.');
                 return;
             }
-            
-            // Get shipping information
+
             const name = document.getElementById('name').value.trim();
             const phone = document.getElementById('phone').value.trim();
             const address = document.getElementById('address').value.trim();
             const notes = document.getElementById('notes').value.trim();
-            
-            // Validate shipping information
+
             if (!name || !phone || !address) {
                 alert('Please fill in all required shipping information.');
                 return;
             }
-            
-            // Disable place order button to prevent multiple submissions
             const placeOrderButton = document.getElementById('place-order-button');
             placeOrderButton.disabled = true;
             placeOrderButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
-            
-            // Create order object
+
             const userId = '<?php echo $_SESSION['user_id']; ?>';
             const deliveryFee = 50; // Fixed delivery fee
             const totalAmount = subtotalAmount + deliveryFee;
-            
+
             const order = {
                 buyerId: userId,
                 buyerName: '<?php echo htmlspecialchars($_SESSION['name']); ?>',
@@ -322,28 +308,25 @@ ensureUserLoggedIn('buyer');
                 deliveryFee: deliveryFee,
                 totalAmount: totalAmount
             };
-            
-            // Save order to Firestore
+
             firebase.firestore().collection('orders').add(order)
                 .then(docRef => {
-                    // Clear cart after successful order placement
                     return firebase.firestore().collection('carts').doc(cartId).update({
                         items: []
                     });
                 })
                 .then(() => {
-                    // Redirect to order confirmation page
                     window.location.href = 'orders.php';
                 })
                 .catch(error => {
                     console.error("Error placing order: ", error);
                     alert('Error placing order. Please try again later.');
-                    
-                    // Re-enable place order button
+
                     placeOrderButton.disabled = false;
                     placeOrderButton.innerHTML = 'Place Order';
                 });
         }
     </script>
 </body>
+
 </html>

@@ -3,12 +3,14 @@ session_start();
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Green Trade - Modern UI Demo</title>
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
+
 <body>
     <header class="header">
         <div class="header-brand">
@@ -59,7 +61,7 @@ session_start();
                             <button class="btn btn-primary">Action</button>
                         </div>
                     </div>
-                    
+
                     <div class="card">
                         <div class="card-body">
                             <h3>Simple Card</h3>
@@ -78,17 +80,17 @@ session_start();
                         <label for="demo-name" class="form-label">Full Name</label>
                         <input type="text" class="form-control" id="demo-name" placeholder="Enter your name">
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="demo-email" class="form-label">Email Address</label>
                         <input type="email" class="form-control" id="demo-email" placeholder="Enter your email">
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="demo-message" class="form-label">Message</label>
                         <textarea class="form-control" id="demo-message" rows="3" placeholder="Enter your message"></textarea>
                     </div>
-                    
+
                     <button type="submit" class="btn btn-primary">Submit Form</button>
                 </form>
             </div>
@@ -150,118 +152,118 @@ session_start();
     </main>
 
     <script src="assets/js/dialogs.js"></script>
-    
+
     <style>
-    .main-content {
-        padding: var(--space-8) 0;
-        min-height: calc(100vh - 200px);
-    }
+        .main-content {
+            padding: var(--space-8) 0;
+            min-height: calc(100vh - 200px);
+        }
 
-    .demo-section {
-        text-align: center;
-        margin-bottom: var(--space-12);
-    }
+        .demo-section {
+            text-align: center;
+            margin-bottom: var(--space-12);
+        }
 
-    .demo-title {
-        font-size: 3rem;
-        font-weight: 700;
-        color: var(--gray-900);
-        margin-bottom: var(--space-3);
-    }
-
-    .demo-subtitle {
-        font-size: 1.25rem;
-        color: var(--gray-600);
-        margin: 0;
-    }
-
-    .demo-card {
-        background: white;
-        border-radius: var(--radius-xl);
-        box-shadow: var(--shadow-md);
-        border: 1px solid var(--gray-200);
-        padding: var(--space-8);
-        margin-bottom: var(--space-8);
-    }
-
-    .demo-card-title {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: var(--gray-900);
-        margin-bottom: var(--space-6);
-        border-bottom: 2px solid var(--gray-200);
-        padding-bottom: var(--space-4);
-    }
-
-    .demo-buttons {
-        display: flex;
-        gap: var(--space-4);
-        flex-wrap: wrap;
-        align-items: center;
-    }
-
-    .demo-cards {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: var(--space-6);
-    }
-
-    .demo-form {
-        max-width: 500px;
-    }
-
-    .demo-alerts {
-        display: flex;
-        flex-direction: column;
-        gap: var(--space-4);
-    }
-
-    .demo-badges {
-        display: flex;
-        gap: var(--space-3);
-        flex-wrap: wrap;
-        align-items: center;
-    }
-
-    .demo-dialogs {
-        display: flex;
-        gap: var(--space-4);
-        flex-wrap: wrap;
-    }
-
-    .demo-toasts {
-        display: flex;
-        gap: var(--space-4);
-        flex-wrap: wrap;
-    }
-
-    /* Responsive Design */
-    @media (max-width: 768px) {
         .demo-title {
-            font-size: 2rem;
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: var(--space-3);
         }
 
         .demo-subtitle {
-            font-size: 1rem;
+            font-size: 1.25rem;
+            color: var(--gray-600);
+            margin: 0;
         }
 
         .demo-card {
-            padding: var(--space-6);
+            background: white;
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--gray-200);
+            padding: var(--space-8);
+            margin-bottom: var(--space-8);
         }
 
-        .demo-buttons,
-        .demo-dialogs,
-        .demo-toasts {
+        .demo-card-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: var(--space-6);
+            border-bottom: 2px solid var(--gray-200);
+            padding-bottom: var(--space-4);
+        }
+
+        .demo-buttons {
+            display: flex;
+            gap: var(--space-4);
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .demo-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--space-6);
+        }
+
+        .demo-form {
+            max-width: 500px;
+        }
+
+        .demo-alerts {
+            display: flex;
             flex-direction: column;
-            align-items: stretch;
+            gap: var(--space-4);
         }
 
-        .demo-buttons .btn,
-        .demo-dialogs .btn,
-        .demo-toasts .btn {
-            width: 100%;
+        .demo-badges {
+            display: flex;
+            gap: var(--space-3);
+            flex-wrap: wrap;
+            align-items: center;
         }
-    }
+
+        .demo-dialogs {
+            display: flex;
+            gap: var(--space-4);
+            flex-wrap: wrap;
+        }
+
+        .demo-toasts {
+            display: flex;
+            gap: var(--space-4);
+            flex-wrap: wrap;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .demo-title {
+                font-size: 2rem;
+            }
+
+            .demo-subtitle {
+                font-size: 1rem;
+            }
+
+            .demo-card {
+                padding: var(--space-6);
+            }
+
+            .demo-buttons,
+            .demo-dialogs,
+            .demo-toasts {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .demo-buttons .btn,
+            .demo-dialogs .btn,
+            .demo-toasts .btn {
+                width: 100%;
+            }
+        }
     </style>
 
     <script>
@@ -370,4 +372,5 @@ session_start();
         });
     </script>
 </body>
+
 </html>

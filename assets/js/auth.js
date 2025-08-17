@@ -49,7 +49,6 @@ function registerUser(email, password, name, phone, address, userType) {
             
             let errorMessage = 'An error occurred during registration.';
             
-            // Handle specific Firebase auth errors
             switch (error.code) {
                 case 'auth/email-already-in-use':
                     errorMessage = 'This email is already registered. Please use a different email or try logging in.';
@@ -129,7 +128,6 @@ function loginUser(email, password, userType) {
             
             let errorMessage = 'An error occurred during login.';
             
-            // Handle specific Firebase auth errors
             switch (error.code) {
                 case 'auth/user-not-found':
                     errorMessage = 'No account found with this email address. Please check your email or create a new account.';
@@ -199,7 +197,6 @@ function showError(elementId, message) {
     }
 }
 
-// Enhanced error handling for form validation
 function validateForm(formData) {
     const errors = [];
     
@@ -226,7 +223,6 @@ function validateForm(formData) {
     return errors;
 }
 
-// Show validation errors
 function showValidationErrors(errors) {
     if (errors.length === 1) {
         showToast({

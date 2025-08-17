@@ -11,6 +11,7 @@ $orderId = isset($_GET['id']) ? htmlspecialchars($_GET['id']) : '';
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -19,9 +20,10 @@ $orderId = isset($_GET['id']) ? htmlspecialchars($_GET['id']) : '';
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.css">
     <link rel="stylesheet" href="../assets/css/style.css">
 </head>
+
 <body>
     <?php include '../includes/header.php'; ?>
-    
+
     <div class="container mt-4">
         <?php if ($orderId): ?>
             <div class="d-flex justify-content-between align-items-center mb-4">
@@ -30,7 +32,7 @@ $orderId = isset($_GET['id']) ? htmlspecialchars($_GET['id']) : '';
                     <i data-feather="arrow-left" class="me-1"></i> Back to Orders
                 </a>
             </div>
-            
+
             <div id="order-details-container">
                 <div class="text-center py-5" id="loading">
                     <div class="spinner-border text-success" role="status">
@@ -41,7 +43,7 @@ $orderId = isset($_GET['id']) ? htmlspecialchars($_GET['id']) : '';
             </div>
         <?php else: ?>
             <h1 class="mb-4">Manage Orders</h1>
-            
+
             <ul class="nav nav-tabs mb-4">
                 <li class="nav-item">
                     <a class="nav-link active" id="all-tab" data-bs-toggle="tab" href="#all">All Orders</a>
@@ -59,7 +61,7 @@ $orderId = isset($_GET['id']) ? htmlspecialchars($_GET['id']) : '';
                     <a class="nav-link" id="cancelled-tab" data-bs-toggle="tab" href="#cancelled">Cancelled</a>
                 </li>
             </ul>
-            
+
             <div class="tab-content">
                 <div class="tab-pane fade show active" id="all">
                     <div id="all-orders-container">
@@ -71,7 +73,7 @@ $orderId = isset($_GET['id']) ? htmlspecialchars($_GET['id']) : '';
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="tab-pane fade" id="pending">
                     <div id="pending-orders-container">
                         <div class="text-center py-5" id="loading-pending">
@@ -82,7 +84,7 @@ $orderId = isset($_GET['id']) ? htmlspecialchars($_GET['id']) : '';
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="tab-pane fade" id="processing">
                     <div id="processing-orders-container">
                         <div class="text-center py-5" id="loading-processing">
@@ -93,7 +95,7 @@ $orderId = isset($_GET['id']) ? htmlspecialchars($_GET['id']) : '';
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="tab-pane fade" id="delivered">
                     <div id="delivered-orders-container">
                         <div class="text-center py-5" id="loading-delivered">
@@ -104,7 +106,7 @@ $orderId = isset($_GET['id']) ? htmlspecialchars($_GET['id']) : '';
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="tab-pane fade" id="cancelled">
                     <div id="cancelled-orders-container">
                         <div class="text-center py-5" id="loading-cancelled">
@@ -118,7 +120,7 @@ $orderId = isset($_GET['id']) ? htmlspecialchars($_GET['id']) : '';
             </div>
         <?php endif; ?>
     </div>
-    
+
     <div class="modal fade" id="updateStatusModal" tabindex="-1" aria-labelledby="updateStatusModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -147,9 +149,9 @@ $orderId = isset($_GET['id']) ? htmlspecialchars($_GET['id']) : '';
             </div>
         </div>
     </div>
-    
+
     <?php include '../includes/footer.php'; ?>
-    
+
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
@@ -161,30 +163,36 @@ $orderId = isset($_GET['id']) ? htmlspecialchars($_GET['id']) : '';
     <script>
         // Global variable to track current order being modified
         let currentOrderId = null;
-        
+
         // Helper function to get status badge class
         function getStatusBadgeClass(status) {
-            switch(status) {
-                case 'Pending': return 'bg-warning';
-                case 'Processing': return 'bg-info';
-                case 'Out for Delivery': return 'bg-primary';
-                case 'Delivered': return 'bg-success';
-                case 'Cancelled': return 'bg-danger';
-                default: return 'bg-secondary';
+            switch (status) {
+                case 'Pending':
+                    return 'bg-warning';
+                case 'Processing':
+                    return 'bg-info';
+                case 'Out for Delivery':
+                    return 'bg-primary';
+                case 'Delivered':
+                    return 'bg-success';
+                case 'Cancelled':
+                    return 'bg-danger';
+                default:
+                    return 'bg-secondary';
             }
         }
-        
+
         // Function to load order details
         function loadOrderDetails(orderId) {
             waitForFirebase(() => {
                 const sellerId = '<?php echo $_SESSION['user_id']; ?>';
                 const orderDetailsContainer = document.getElementById('order-details-container');
                 const loading = document.getElementById('loading');
-                
+
                 firebase.firestore().collection('orders').doc(orderId).get()
                     .then(doc => {
                         loading.style.display = 'none';
-                        
+
                         if (!doc.exists) {
                             orderDetailsContainer.innerHTML = `
                                 <div class="alert alert-danger">
@@ -193,10 +201,10 @@ $orderId = isset($_GET['id']) ? htmlspecialchars($_GET['id']) : '';
                             `;
                             return;
                         }
-                        
+
                         const order = doc.data();
                         const sellerItems = order.items.filter(item => item.sellerId === sellerId);
-                        
+
                         if (sellerItems.length === 0) {
                             orderDetailsContainer.innerHTML = `
                                 <div class="alert alert-danger">
@@ -205,12 +213,12 @@ $orderId = isset($_GET['id']) ? htmlspecialchars($_GET['id']) : '';
                             `;
                             return;
                         }
-                        
+
                         let sellerTotal = 0;
                         sellerItems.forEach(item => {
                             sellerTotal += item.price * item.quantity;
                         });
-                        
+
                         const orderDate = new Date(order.orderDate.toDate()).toLocaleString();
                         orderDetailsContainer.innerHTML = `
                             <div class="card mb-4">
@@ -278,7 +286,7 @@ $orderId = isset($_GET['id']) ? htmlspecialchars($_GET['id']) : '';
                                 </div>
                             </div>  
                         `;
-                        
+
                         // Add event listener for update status button
                         document.querySelector('.update-status-btn').addEventListener('click', function() {
                             currentOrderId = this.getAttribute('data-id');
@@ -296,31 +304,34 @@ $orderId = isset($_GET['id']) ? htmlspecialchars($_GET['id']) : '';
                     });
             });
         }
-        
+
         // Function to load orders for a specific tab
         function loadOrders(tabId) {
             waitForFirebase(() => {
                 const sellerId = '<?php echo $_SESSION['user_id']; ?>';
                 const container = document.getElementById(`${tabId}-orders-container`);
                 const loading = document.getElementById(`loading-${tabId}`);
-                
+
                 if (!loading || loading.style.display === 'none') return;
-                
+
                 firebase.firestore().collection('orders')
                     .orderBy('orderDate', 'desc')
                     .get()
                     .then(snapshot => {
                         loading.style.display = 'none';
-                        
+
                         if (snapshot.empty) {
                             container.innerHTML = noOrdersMessage(tabId);
                             return;
                         }
-                        
+
                         const relevantOrders = [];
                         snapshot.forEach(doc => {
-                            const order = { id: doc.id, ...doc.data() };
-                            
+                            const order = {
+                                id: doc.id,
+                                ...doc.data()
+                            };
+
                             // Filter by status if not 'all' tab
                             if (tabId !== 'all') {
                                 if (tabId === 'processing' && !['Processing', 'Out for Delivery'].includes(order.status)) {
@@ -329,7 +340,7 @@ $orderId = isset($_GET['id']) ? htmlspecialchars($_GET['id']) : '';
                                     return;
                                 }
                             }
-                            
+
                             // Filter items by seller
                             const sellerItems = order.items.filter(item => item.sellerId === sellerId);
                             if (sellerItems.length > 0) {
@@ -339,12 +350,12 @@ $orderId = isset($_GET['id']) ? htmlspecialchars($_GET['id']) : '';
                                 relevantOrders.push(order);
                             }
                         });
-                        
+
                         if (relevantOrders.length === 0) {
                             container.innerHTML = noOrdersMessage(tabId);
                             return;
                         }
-                        
+
                         // Create orders table
                         container.innerHTML = `
                             <table class="table table-hover">
@@ -385,7 +396,7 @@ $orderId = isset($_GET['id']) ? htmlspecialchars($_GET['id']) : '';
                                 </tbody>
                             </table>
                         `;
-                        
+
                         // Add event listeners for update status buttons
                         document.querySelectorAll('.update-status-btn').forEach(button => {
                             button.addEventListener('click', function() {
@@ -405,7 +416,7 @@ $orderId = isset($_GET['id']) ? htmlspecialchars($_GET['id']) : '';
                     });
             });
         }
-        
+
         // Helper function for no orders message
         function noOrdersMessage(tabId) {
             return `
@@ -416,11 +427,11 @@ $orderId = isset($_GET['id']) ? htmlspecialchars($_GET['id']) : '';
                 </div>
             `;
         }
-        
+
         // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
             feather.replace();
-            
+
             waitForFirebase(() => {
                 <?php if ($orderId): ?>
                     loadOrderDetails('<?php echo $orderId; ?>');
@@ -434,52 +445,53 @@ $orderId = isset($_GET['id']) ? htmlspecialchars($_GET['id']) : '';
                     });
                 <?php endif; ?>
             });
-            
+
             // Status update handler
             document.getElementById('confirm-update-status').addEventListener('click', function() {
                 if (!currentOrderId) return;
-                
+
                 const button = this;
                 const newStatus = document.getElementById('order-status').value;
-                
+
                 button.disabled = true;
                 button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Updating...';
-                
+
                 waitForFirebase(() => {
                     firebase.firestore().collection('orders').doc(currentOrderId).update({
-                        status: newStatus
-                    })
-                    .then(() => {
-                        const modal = bootstrap.Modal.getInstance(document.getElementById('updateStatusModal'));
-                        modal.hide();
-                        
-                        <?php if ($orderId): ?>
-                            window.location.reload();
-                        <?php else: ?>
-                            // Reset loading states
-                            ['all', 'pending', 'processing', 'delivered', 'cancelled'].forEach(tab => {
-                                const loading = document.getElementById(`loading-${tab}`);
-                                if (loading) loading.style.display = 'block';
-                                const container = document.getElementById(`${tab}-orders-container`);
-                                if (container) container.innerHTML = '';
-                            });
-                            
-                            // Reload current tab
-                            const activeTab = document.querySelector('.nav-link.active').getAttribute('href').substring(1);
-                            loadOrders(activeTab);
-                        <?php endif; ?>
-                    })
-                    .catch(error => {
-                        console.error("Error updating order status:", error);
-                        alert('Failed to update status: ' + error.message);
-                    })
-                    .finally(() => {
-                        button.disabled = false;
-                        button.textContent = 'Update Status';
-                    });
+                            status: newStatus
+                        })
+                        .then(() => {
+                            const modal = bootstrap.Modal.getInstance(document.getElementById('updateStatusModal'));
+                            modal.hide();
+
+                            <?php if ($orderId): ?>
+                                window.location.reload();
+                            <?php else: ?>
+                                    // Reset loading states
+                                    ['all', 'pending', 'processing', 'delivered', 'cancelled'].forEach(tab => {
+                                        const loading = document.getElementById(`loading-${tab}`);
+                                        if (loading) loading.style.display = 'block';
+                                        const container = document.getElementById(`${tab}-orders-container`);
+                                        if (container) container.innerHTML = '';
+                                    });
+
+                                // Reload current tab
+                                const activeTab = document.querySelector('.nav-link.active').getAttribute('href').substring(1);
+                                loadOrders(activeTab);
+                            <?php endif; ?>
+                        })
+                        .catch(error => {
+                            console.error("Error updating order status:", error);
+                            alert('Failed to update status: ' + error.message);
+                        })
+                        .finally(() => {
+                            button.disabled = false;
+                            button.textContent = 'Update Status';
+                        });
                 });
             });
         });
     </script>
 </body>
+
 </html>

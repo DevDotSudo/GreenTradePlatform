@@ -11,6 +11,7 @@ $deleted = isset($_GET['deleted']) ? $_GET['deleted'] : '';
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -19,9 +20,10 @@ $deleted = isset($_GET['deleted']) ? $_GET['deleted'] : '';
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.css">
     <link rel="stylesheet" href="../assets/css/style.css">
 </head>
+
 <body>
     <?php include '../includes/header.php'; ?>
-    
+
     <div class="container mt-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1>My Products</h1>
@@ -29,28 +31,28 @@ $deleted = isset($_GET['deleted']) ? $_GET['deleted'] : '';
                 <i data-feather="plus" class="me-1"></i> Add New Product
             </a>
         </div>
-        
+
         <?php if ($added): ?>
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 Product added successfully!
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         <?php endif; ?>
-        
+
         <?php if ($updated): ?>
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 Product updated successfully!
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         <?php endif; ?>
-        
+
         <?php if ($deleted): ?>
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 Product deleted successfully!
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         <?php endif; ?>
-        
+
         <div class="card">
             <div class="card-body">
                 <div id="products-container">
@@ -60,7 +62,7 @@ $deleted = isset($_GET['deleted']) ? $_GET['deleted'] : '';
                         </div>
                         <p class="mt-2">Loading your products...</p>
                     </div>
-                    
+
                     <div class="text-center py-5 d-none" id="no-products">
                         <i data-feather="package" style="width: 48px; height: 48px;" class="text-muted mb-3"></i>
                         <h4>No products yet</h4>
@@ -105,31 +107,31 @@ $deleted = isset($_GET['deleted']) ? $_GET['deleted'] : '';
                 loadSellerProducts();
             });
         });
-        
+
         let currentProductId = null;
-        
+
         function loadSellerProducts() {
             const sellerId = '<?php echo $_SESSION['user_id']; ?>';
             const productsContainer = document.getElementById('products-container');
             const loading = document.getElementById('loading');
             const noProducts = document.getElementById('no-products');
-            
+
             firebase.firestore().collection('products')
                 .where('sellerId', '==', sellerId)
                 .orderBy('createdAt', 'desc')
                 .get()
                 .then(snapshot => {
                     loading.style.display = 'none';
-                    
+
                     if (snapshot.empty) {
                         noProducts.classList.remove('d-none');
                         return;
                     }
-                    
+
                     // Create table to display products
                     const table = document.createElement('table');
                     table.className = 'table table-striped table-hover align-middle';
-                    
+
                     const tableHead = document.createElement('thead');
                     tableHead.innerHTML = `
                         <tr>
@@ -140,20 +142,20 @@ $deleted = isset($_GET['deleted']) ? $_GET['deleted'] : '';
                             <th>Actions</th>
                         </tr>
                     `;
-                    
+
                     const tableBody = document.createElement('tbody');
-                    
+
                     snapshot.forEach(doc => {
                         const product = {
                             id: doc.id,
                             ...doc.data()
                         };
-                        
+
                         const row = document.createElement('tr');
-                        
+
                         // Check if product has base64 image data
                         const hasImage = product.imageData ? true : false;
-                        
+
                         row.innerHTML = `
                             <td>
                                 <div class="d-flex align-items-center">
@@ -186,36 +188,36 @@ $deleted = isset($_GET['deleted']) ? $_GET['deleted'] : '';
                                 </div>
                             </td>
                         `;
-                        
+
                         tableBody.appendChild(row);
                     });
-                    
+
                     table.appendChild(tableHead);
                     table.appendChild(tableBody);
                     productsContainer.innerHTML = '';
                     productsContainer.appendChild(table);
-                    
+
                     // Initialize Feather icons for dynamically added content
                     feather.replace();
-                    
+
                     // Add event listeners for delete buttons
                     document.querySelectorAll('.delete-product').forEach(button => {
                         button.addEventListener('click', function() {
                             const productId = this.getAttribute('data-id');
                             const productName = this.getAttribute('data-name');
-                            
+
                             // Set current product for delete modal
                             currentProductId = productId;
-                            
+
                             // Update modal content
                             document.getElementById('delete-product-name').textContent = productName;
-                            
+
                             // Show the modal
                             const modal = new bootstrap.Modal(document.getElementById('deleteProductModal'));
                             modal.show();
                         });
                     });
-                    
+
                     // Set up confirm delete button
                     document.getElementById('confirm-delete').addEventListener('click', function() {
                         if (currentProductId) {
@@ -226,7 +228,7 @@ $deleted = isset($_GET['deleted']) ? $_GET['deleted'] : '';
                 .catch(error => {
                     loading.style.display = 'none';
                     console.error("Error getting products: ", error);
-                    
+
                     productsContainer.innerHTML = `
                         <div class="alert alert-danger">
                             Error loading products. Please try again later.
@@ -234,28 +236,28 @@ $deleted = isset($_GET['deleted']) ? $_GET['deleted'] : '';
                     `;
                 });
         }
-        
+
         // Function to delete a product
         function deleteProduct(productId) {
             // Disable delete button to prevent multiple clicks
             const deleteButton = document.getElementById('confirm-delete');
             deleteButton.disabled = true;
             deleteButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Deleting...';
-            
+
             // Delete the product from Firestore
             firebase.firestore().collection('products').doc(productId).delete()
                 .then(() => {
                     // Hide the modal
                     const modal = bootstrap.Modal.getInstance(document.getElementById('deleteProductModal'));
                     modal.hide();
-                    
+
                     // Redirect to products page with deleted parameter
                     window.location.href = 'my_products.php?deleted=true';
                 })
                 .catch(error => {
                     console.error("Error deleting product: ", error);
                     alert('Error deleting product. Please try again later.');
-                    
+
                     // Re-enable delete button
                     deleteButton.disabled = false;
                     deleteButton.textContent = 'Delete';
@@ -263,4 +265,5 @@ $deleted = isset($_GET['deleted']) ? $_GET['deleted'] : '';
         }
     </script>
 </body>
+
 </html>

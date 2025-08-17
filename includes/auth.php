@@ -1,14 +1,16 @@
 <?php
-function isLoggedIn() {
+function isLoggedIn()
+{
     return isset($_SESSION['user_id']);
 }
 
-function ensureUserLoggedIn($requiredType = null) {
+function ensureUserLoggedIn($requiredType = null)
+{
     if (!isLoggedIn()) {
         header("Location: /login.php");
         exit();
     }
-    
+
     if ($requiredType && $_SESSION['user_type'] !== $requiredType) {
         if ($_SESSION['user_type'] === 'buyer') {
             header("Location: /buyer/dashboard.php");
@@ -20,7 +22,8 @@ function ensureUserLoggedIn($requiredType = null) {
     }
 }
 
-function createUserSession($userId, $email, $name, $userType, $phone, $address) {
+function createUserSession($userId, $email, $name, $userType, $phone, $address)
+{
     $_SESSION['user_id'] = $userId;
     $_SESSION['email'] = $email;
     $_SESSION['name'] = $name;
@@ -29,7 +32,8 @@ function createUserSession($userId, $email, $name, $userType, $phone, $address) 
     $_SESSION['address'] = $address;
 }
 
-function logoutUser() {
+function logoutUser()
+{
     $_SESSION = array();
     session_destroy();
     header("Location: /login.php");

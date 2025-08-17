@@ -8,6 +8,7 @@ ensureUserLoggedIn('buyer');
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,9 +17,10 @@ ensureUserLoggedIn('buyer');
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.css">
     <link rel="stylesheet" href="../assets/css/style.css">
 </head>
+
 <body>
     <?php include '../includes/header.php'; ?>
-    
+
     <div class="container mt-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1>My Cart</h1>
@@ -26,7 +28,7 @@ ensureUserLoggedIn('buyer');
                 <i data-feather="arrow-left" class="me-1"></i> Continue Shopping
             </a>
         </div>
-        
+
         <div class="row">
             <div class="col-lg-8">
                 <div class="card mb-4">
@@ -38,7 +40,7 @@ ensureUserLoggedIn('buyer');
                                 </div>
                                 <p class="mt-2">Loading cart items...</p>
                             </div>
-                            
+
                             <div class="text-center py-5 d-none" id="empty-cart">
                                 <img src="../assets/svg/empty-cart.svg" alt="Empty Cart" style="max-width: 150px;" class="mb-3">
                                 <h4>Your cart is empty</h4>
@@ -49,7 +51,7 @@ ensureUserLoggedIn('buyer');
                     </div>
                 </div>
             </div>
-            
+
             <div class="col-lg-4">
                 <div class="card">
                     <div class="card-header bg-white">
@@ -75,14 +77,14 @@ ensureUserLoggedIn('buyer');
             </div>
         </div>
     </div>
-    
+
     <?php include '../includes/footer.php'; ?>
-    
+
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
     <script src="../assets/js/firebase.js"></script>
@@ -90,58 +92,54 @@ ensureUserLoggedIn('buyer');
     <script>
         // Global variables
         let currentCartId = null;
-        
+
         // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
             feather.replace();
-            
+
             waitForFirebase(() => {
                 loadCart();
-                
+
                 // Checkout button click handler
                 document.getElementById('checkout-button').addEventListener('click', function() {
                     window.location.href = 'checkout.php';
                 });
             });
         });
-        
-        // Function to load cart items
+
         function loadCart() {
             const userId = '<?php echo $_SESSION['user_id']; ?>';
             const cartItemsContainer = document.getElementById('cart-items-container');
             const loading = document.getElementById('loading');
             const emptyCart = document.getElementById('empty-cart');
             const checkoutButton = document.getElementById('checkout-button');
-            
+
             loading.style.display = 'block';
             emptyCart.classList.add('d-none');
             checkoutButton.disabled = true;
-            
-            // Get cart from Firestore
+
             firebase.firestore().collection('carts')
                 .where('userId', '==', userId)
                 .limit(1)
                 .get()
                 .then(snapshot => {
                     loading.style.display = 'none';
-                    
+
                     if (snapshot.empty) {
                         showEmptyCart();
                         return;
                     }
-                    
-                    // Get the cart document
+
                     const cartDoc = snapshot.docs[0];
                     currentCartId = cartDoc.id;
                     const cart = cartDoc.data();
-                    
-                    // Check if cart has items
-                    if (!cart.items || cart.items.length === 0) {
+
+                    if (!cart || Object.keys(cart).length === 0) {
                         showEmptyCart();
                         return;
                     }
-                    
-                    renderCartItems(cartDoc.id, cart.items);
+
+                    renderCartItems(cartDoc.id, [cart]);
                 })
                 .catch(error => {
                     loading.style.display = 'none';
@@ -149,19 +147,16 @@ ensureUserLoggedIn('buyer');
                     showError("Error loading cart. Please try again later.");
                 });
         }
-        
-        // Function to render cart items
+
         function renderCartItems(cartId, items) {
             const cartItemsContainer = document.getElementById('cart-items-container');
             const checkoutButton = document.getElementById('checkout-button');
-            
-            // Clear container
+
             cartItemsContainer.innerHTML = '';
-            
-            // Group items by seller
+
             const itemsBySeller = {};
             let subtotal = 0;
-            
+
             items.forEach(item => {
                 if (!itemsBySeller[item.sellerId]) {
                     itemsBySeller[item.sellerId] = {
@@ -169,98 +164,90 @@ ensureUserLoggedIn('buyer');
                         items: []
                     };
                 }
-                
+
                 itemsBySeller[item.sellerId].items.push(item);
                 subtotal += item.price * item.quantity;
             });
-            
-            // Create and append cart item elements grouped by seller
+
             Object.keys(itemsBySeller).forEach(sellerId => {
                 const sellerGroup = itemsBySeller[sellerId];
-                
-                // Create seller section
+
                 const sellerSection = document.createElement('div');
                 sellerSection.className = 'mb-4';
                 sellerSection.innerHTML = `
-                    <h5 class="mb-3">Seller: ${sellerGroup.sellerName}</h5>
-                    <table class="table align-middle">
-                        <tbody>
-                            ${sellerGroup.items.map(item => {
-                                const itemTotal = item.price * item.quantity;
-                                return `
-                                    <tr>
-                                        <td width="80">
-                                            <div class="bg-light rounded text-center p-2" style="width: 60px; height: 60px;">
-                                                <img src="${item.imageUrl || '../assets/svg/package.svg'}" 
-                                                     alt="${item.name}" 
-                                                     style="max-width: 100%; max-height: 100%; object-fit: contain;">
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <h6 class="mb-0">${item.name}</h6>
-                                            <p class="text-muted mb-0">₱${item.price.toFixed(2)} x ${item.quantity}</p>
-                                        </td>
-                                        <td class="text-end">
-                                            <h6 class="mb-0">₱${itemTotal.toFixed(2)}</h6>
-                                            <button class="btn btn-sm btn-link text-danger remove-item" 
-                                                data-product-id="${item.productId}">
-                                                Remove
-                                            </button>
-                                        </td>
-                                    </tr>
-                                `;
-                            }).join('')}
-                        </tbody>
-                    </table>
-                `;
-                
+            <h5 class="mb-3">Seller: ${sellerGroup.sellerName}</h5>
+            <table class="table align-middle">
+                <tbody>
+                    ${sellerGroup.items.map(item => {
+                        const itemTotal = item.price * item.quantity;
+                        return `
+                            <tr>
+                                <td width="80">
+                                    <div class="bg-light rounded text-center p-2" style="width: 60px; height: 60px;">
+                                        <img src="${item.imageUrl || '../assets/svg/package.svg'}" 
+                                             alt="${item.productName || 'No Name'}" 
+                                             style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                                    </div>
+                                </td>
+                                <td>
+                                    <h6 class="mb-0">${item.productName || 'Unnamed Product'}</h6>
+                                    <p class="text-muted mb-0">₱${item.price.toFixed(2)} x ${item.quantity}</p>
+                                </td>
+                                <td class="text-end">
+                                    <h6 class="mb-0">₱${itemTotal.toFixed(2)}</h6>
+                                    <button class="btn btn-sm btn-link text-danger remove-item" 
+                                        data-product-id="${item.productId}">
+                                        Remove
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        `;
+
                 cartItemsContainer.appendChild(sellerSection);
             });
-            
-            // Update order summary
+
             updateOrderSummary(subtotal);
-            
-            // Enable checkout button
+
             checkoutButton.disabled = false;
-            
-            // Add event listeners for remove buttons
+
             document.querySelectorAll('.remove-item').forEach(button => {
                 button.addEventListener('click', function() {
                     const productId = this.getAttribute('data-product-id');
                     removeFromCart(currentCartId, productId);
                 });
             });
-            
-            // Initialize Feather icons for dynamically added content
+
             feather.replace();
         }
-        
-        // Function to update order summary
+
         function updateOrderSummary(subtotal) {
             const deliveryFee = 50; // Fixed delivery fee
             const total = subtotal + deliveryFee;
-            
+
             document.getElementById('subtotal').textContent = `₱${subtotal.toFixed(2)}`;
             document.getElementById('delivery-fee').textContent = `₱${deliveryFee.toFixed(2)}`;
             document.getElementById('total').textContent = `₱${total.toFixed(2)}`;
         }
-        
-        // Function to remove item from cart
+
         function removeFromCart(cartId, productId) {
             if (!cartId) return;
-            
+
             const button = document.querySelector(`.remove-item[data-product-id="${productId}"]`);
             if (button) button.disabled = true;
-            
+
             firebase.firestore().collection('carts').doc(cartId).get()
                 .then(doc => {
                     if (!doc.exists) {
                         throw new Error('Cart not found');
                     }
-                    
+
                     const cart = doc.data();
                     const updatedItems = cart.items.filter(item => item.productId !== productId);
-                    
+
                     return firebase.firestore().collection('carts').doc(cartId).update({
                         items: updatedItems
                     });
@@ -268,7 +255,7 @@ ensureUserLoggedIn('buyer');
                 .then(() => {
                     // Reload cart
                     loadCart();
-                    
+
                     // Update cart badge
                     if (typeof updateCartBadge === 'function') {
                         updateCartBadge();
@@ -280,15 +267,13 @@ ensureUserLoggedIn('buyer');
                     if (button) button.disabled = false;
                 });
         }
-        
-        // Helper function to show empty cart state
+
         function showEmptyCart() {
             document.getElementById('empty-cart').classList.remove('d-none');
             document.getElementById('checkout-button').disabled = true;
             updateOrderSummary(0);
         }
-        
-        // Helper function to show error message
+
         function showError(message) {
             const cartItemsContainer = document.getElementById('cart-items-container');
             cartItemsContainer.innerHTML = `
@@ -299,4 +284,5 @@ ensureUserLoggedIn('buyer');
         }
     </script>
 </body>
+
 </html>

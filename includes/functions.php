@@ -45,7 +45,6 @@ function getProductCategories() {
     ];
 }
 
-// Get order status options
 function getOrderStatuses() {
     return [
         'Pending',
@@ -56,7 +55,6 @@ function getOrderStatuses() {
     ];
 }
 
-// Get status badge class
 function getStatusBadgeClass($status) {
     switch($status) {
         case 'Pending':
@@ -74,13 +72,11 @@ function getStatusBadgeClass($status) {
     }
 }
 
-// Get Firebase config for JavaScript
 function getFirebaseConfigJSON() {
     global $firebaseConfig;
     return json_encode($firebaseConfig);
 }
 
-// Generate a random ID
 function generateRandomId($length = 10) {
     return substr(str_shuffle(str_repeat($x='0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', ceil($length/strlen($x)) )),1,$length);
 }
