@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../includes/session.php';
 include '../includes/auth.php';
 include '../includes/functions.php';
 
@@ -20,7 +20,6 @@ ensureUserLoggedIn('buyer');
 
     <main class="main-content">
         <div class="container">
-            <!-- Welcome Section -->
             <div class="welcome-section">
                 <div class="welcome-content">
                     <h1 class="welcome-title">
@@ -30,7 +29,6 @@ ensureUserLoggedIn('buyer');
                 </div>
             </div>
 
-            <!-- Stats Grid -->
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-icon cart-icon">🛒</div>
@@ -38,7 +36,7 @@ ensureUserLoggedIn('buyer');
                         <h3 class="stat-title">My Cart</h3>
                         <div class="stat-number" id="cart-count">0</div>
                         <p class="stat-description">Items in cart</p>
-                        <a href="cart.php" class="btn btn-outline-primary">View my cart →</a>
+                        <a href="/buyer/cart.php" class="btn btn-outline-primary">View my cart →</a>
                     </div>
                 </div>
 
@@ -48,7 +46,7 @@ ensureUserLoggedIn('buyer');
                         <h3 class="stat-title">My Orders</h3>
                         <div class="stat-number" id="orders-count">0</div>
                         <p class="stat-description">Active orders</p>
-                        <a href="orders.php" class="btn btn-outline-primary">View my orders →</a>
+                        <a href="/buyer/orders.php" class="btn btn-outline-primary">View my orders →</a>
                     </div>
                 </div>
 
@@ -58,26 +56,25 @@ ensureUserLoggedIn('buyer');
                         <h3 class="stat-title">Available Products</h3>
                         <div class="stat-number" id="products-count">0</div>
                         <p class="stat-description">Products to browse</p>
-                        <a href="products.php" class="btn btn-outline-primary">Shop now →</a>
+                        <a href="/buyer/products.php" class="btn btn-outline-primary">Shop now →</a>
                     </div>
                 </div>
             </div>
 
-            <!-- Recent Orders Section -->
             <div class="recent-orders-section">
                 <div class="section-header">
                     <h2 class="section-title">Recent Orders</h2>
-                    <a href="orders.php" class="section-link">View all orders →</a>
+                    <a href="/buyer/orders.php" class="section-link">View all orders →</a>
                 </div>
 
                 <div class="orders-container">
                     <div id="recent-orders-list">
                         <!-- Orders will be loaded here -->
-                        <div class="empty-state" id="no-orders">
+                        <div class="empty-state d-none" id="no-orders">
                             <div class="empty-icon">📦</div>
                             <h3 class="empty-title">No orders yet</h3>
                             <p class="empty-description">When you place orders, they will appear here.</p>
-                            <a href="products.php" class="btn btn-primary">Shop Now</a>
+                            <a href="/buyer/products.php" class="btn btn-primary">Shop Now</a>
                         </div>
                     </div>
                 </div>
@@ -130,19 +127,31 @@ ensureUserLoggedIn('buyer');
 
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: var(--space-6);
-            margin-bottom: var(--space-12);
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: var(--space-4);
+            margin-bottom: var(--space-8);
         }
 
         .stat-card {
             background: white;
-            border-radius: var(--radius-xl);
-            padding: var(--space-8);
-            box-shadow: var(--shadow-md);
+            border-radius: var(--radius-lg);
+            padding: var(--space-6);
+            box-shadow: var(--shadow-sm);
             border: 1px solid var(--gray-200);
             transition: all var(--transition-normal);
             text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-500), var(--primary-600));
         }
 
         .stat-card:hover {
@@ -151,9 +160,10 @@ ensureUserLoggedIn('buyer');
         }
 
         .stat-icon {
-            font-size: 3rem;
-            margin-bottom: var(--space-4);
+            font-size: 2.5rem;
+            margin-bottom: var(--space-3);
             display: block;
+            opacity: 0.8;
         }
 
         .cart-icon {
@@ -176,10 +186,11 @@ ensureUserLoggedIn('buyer');
         }
 
         .stat-number {
-            font-size: 3rem;
+            font-size: 2.5rem;
             font-weight: 700;
             color: var(--primary-600);
             margin-bottom: var(--space-2);
+            line-height: 1;
         }
 
         .stat-description {
@@ -317,14 +328,19 @@ ensureUserLoggedIn('buyer');
             .stats-grid {
                 grid-template-columns: 1fr;
                 gap: var(--space-4);
+                margin-bottom: var(--space-6);
             }
 
             .stat-card {
-                padding: var(--space-6);
+                padding: var(--space-5);
             }
 
             .stat-number {
-                font-size: 2.5rem;
+                font-size: 2.25rem;
+            }
+
+            .welcome-title {
+                font-size: 1.75rem;
             }
 
             .section-header {
@@ -355,31 +371,32 @@ ensureUserLoggedIn('buyer');
         });
 
         function loadDashboardData() {
-            // Load cart count
-            getCartCount().then(count => {
-                document.getElementById('cart-count').textContent = count;
-            });
+            if (window.loadingOverlay) {
+                window.loadingOverlay.show('Loading dashboard...');
+            }
 
-            // Load orders count
-            getOrdersCount().then(count => {
-                document.getElementById('orders-count').textContent = count;
+            Promise.all([
+                getCartCount(),
+                getOrdersCount(),
+                getProductsCount()
+            ]).then(([cartCount, ordersCount, productsCount]) => {
+                document.getElementById('cart-count').textContent = cartCount;
+                document.getElementById('orders-count').textContent = ordersCount;
+                document.getElementById('products-count').textContent = productsCount;
+                if (window.loadingOverlay) window.loadingOverlay.hide();
+                loadRecentOrders();
+            }).catch(error => {
+                if (window.loadingOverlay) window.loadingOverlay.hide();
+                console.error('Error loading dashboard data:', error);
             });
-
-            // Load products count
-            getProductsCount().then(count => {
-                document.getElementById('products-count').textContent = count;
-            });
-
-            // Load recent orders
-            loadRecentOrders();
         }
 
         function loadRecentOrders() {
             const userId = '<?php echo $_SESSION['user_id']; ?>';
 
             firebase.firestore().collection('orders')
-                .where('buyerId', '==', userId)
-                .orderBy('orderDate', 'desc')
+                .where('userId', '==', userId)
+                .orderBy('createdAt', 'desc')
                 .limit(3)
                 .get()
                 .then(snapshot => {
@@ -393,7 +410,7 @@ ensureUserLoggedIn('buyer');
 
                     snapshot.forEach(doc => {
                         const order = doc.data();
-                        const orderDate = new Date(order.orderDate.toDate()).toLocaleDateString();
+                        const orderDate = new Date(order.createdAt.toDate()).toLocaleDateString();
 
                         const orderCard = document.createElement('div');
                         orderCard.className = 'order-card';
@@ -406,8 +423,8 @@ ensureUserLoggedIn('buyer');
                                 <span class="order-status ${getStatusBadgeClass(order.status)}">${order.status}</span>
                             </div>
                             <div class="order-footer">
-                                <span class="order-total">Total Amount: ₱${order.totalAmount.toFixed(2)}</span>
-                                <a href="orders.php?id=${doc.id}" class="btn btn-sm btn-outline-primary">View Details</a>
+                                <span class="order-total">Total Amount: ₱${order.total.toFixed(2)}</span>
+                                <a href="/buyer/orders.php?id=${doc.id}" class="btn btn-sm btn-outline-primary">View Details</a>
                             </div>
                         `;
 
@@ -472,7 +489,7 @@ ensureUserLoggedIn('buyer');
             const userId = '<?php echo $_SESSION['user_id']; ?>';
 
             return firebase.firestore().collection('orders')
-                .where('buyerId', '==', userId)
+                .where('userId', '==', userId)
                 .where('status', 'in', ['Pending', 'Processing', 'Out for Delivery'])
                 .get()
                 .then(snapshot => {

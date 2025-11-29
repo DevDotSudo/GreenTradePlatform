@@ -1,67 +1,284 @@
 <?php
-session_start();
+require_once __DIR__ . '/../includes/session.php';
 include '../includes/auth.php';
 include '../includes/functions.php';
 
-// Ensure user is logged in as a buyer
 ensureUserLoggedIn('buyer');
 
-// Get product ID from URL
 $productId = isset($_GET['id']) ? htmlspecialchars($_GET['id']) : '';
 
-// Redirect if no product ID is provided
 if (!$productId) {
-    header('Location: products.php');
+    header('Location: /buyer/products.php');
     exit();
 }
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Product Details - Green Trade</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.css">
     <link rel="stylesheet" href="../assets/css/style.css">
+    <style>
+        .product-image {
+            max-height: 450px;
+            object-fit: cover;
+            border-radius: var(--radius-2xl);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            transition: transform var(--transition-normal);
+        }
+
+        .product-image:hover {
+            transform: scale(1.02);
+        }
+
+        .product-card {
+            border: none;
+            border-radius: var(--radius-2xl);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            background: linear-gradient(135deg, #ffffff 0%, var(--neutral-50) 100%);
+            border: 1px solid var(--neutral-200);
+            overflow: hidden;
+        }
+        .quantity-control {
+            display: flex;
+            align-items: center;
+            background: var(--neutral-50);
+            border-radius: var(--radius-full);
+            padding: 8px;
+            border: 2px solid var(--neutral-200);
+            transition: all var(--transition-fast);
+        }
+
+        .quantity-control:focus-within {
+            border-color: var(--primary-500);
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+        }
+
+        .quantity-btn {
+            width: 44px;
+            height: 44px;
+            border: none;
+            background: var(--primary-500);
+            color: white;
+            border-radius: 50%;
+            font-weight: 700;
+            font-size: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition-fast);
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+        }
+
+        .quantity-btn:hover:not(:disabled) {
+            background: var(--primary-600);
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+        }
+
+        .quantity-btn:disabled {
+            background: var(--neutral-400);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .quantity-input {
+            width: 70px;
+            border: none;
+            background: transparent;
+            text-align: center;
+            font-weight: 700;
+            font-size: 1.125rem;
+            color: var(--neutral-900);
+        }
+
+        .quantity-input:focus {
+            outline: none;
+        }
+
+        .add-to-cart-btn {
+            background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+            border: none;
+            border-radius: var(--radius-full);
+            padding: 16px 32px;
+            font-weight: 700;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: all var(--transition-fast);
+            box-shadow: 0 8px 25px rgba(34, 197, 94, 0.3);
+            color: white;
+        }
+
+        .add-to-cart-btn:hover:not(:disabled) {
+            background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(34, 197, 94, 0.4);
+        }
+
+        .add-to-cart-btn:disabled {
+            background: var(--neutral-400);
+            transform: none;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(4px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: var(--z-modal);
+        }
+
+        .spinner {
+            width: 56px;
+            height: 56px;
+            border: 4px solid var(--neutral-200);
+            border-top: 4px solid var(--primary-500);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .alert-success {
+            border-radius: 15px;
+            border: none;
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+        }
+
+        .availability-info {
+            background: var(--neutral-50);
+            padding: var(--space-3);
+            border-radius: var(--radius-lg);
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: var(--space-2);
+        }
+
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-label {
+            font-weight: 500;
+            color: var(--neutral-700);
+        }
+
+        .info-value {
+            color: var(--neutral-900);
+            font-weight: 600;
+        }
+    </style>
 </head>
+
 <body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="text-center">
+            <div class="spinner"></div>
+            <p class="text-white mt-3 fs-5">Loading...</p>
+        </div>
+    </div>
+
     <?php include '../includes/header.php'; ?>
 
-    <main class="container py-5">
-        <a href="products.php" class="btn btn-outline-success mb-4 rounded-pill px-4 shadow-sm">
-            <i data-feather="arrow-left" class="me-1"></i> Back to Products
-        </a>
+    <div class="container py-5">
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/buyer/products.php" class="text-decoration-none">Products</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Product Details</li>
+            </ol>
+        </nav>
 
-        <section id="product-details-container" class="card border-0 shadow-lg rounded-4">
-            <div class="card-body text-center py-5" id="loading">
-                <div class="spinner-border text-success" style="width: 3rem; height: 3rem;" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-                <p class="mt-3 fw-semibold text-secondary">Loading product details...</p>
-            </div>
-        </section>
-    </main>
-
-    <!-- Add to Cart Modal -->
-    <div class="modal fade" id="addToCartModal" tabindex="-1" aria-labelledby="addToCartModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content shadow-lg rounded-4">
-                <div class="modal-header border-0">
-                    <h5 class="modal-title fw-bold" id="addToCartModalLabel">Add to Cart</h5>
-                    <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="text-center mb-3">
-                        <h4 id="modal-product-name" class="fw-bold"></h4>
-                        <p class="text-success fw-bold fs-5" id="modal-product-price"></p>
+        <div class="product-card p-4">
+            <div id="productContent">
+                <div class="row align-items-center">
+                    <div class="col-lg-6 mb-4 mb-lg-0">
+                        <div class="text-center">
+                            <img id="productImage" src="" alt="" class="img-fluid product-image">
+                            <div id="noImage" class="d-none">
+                                <div class="bg-light rounded p-5 text-center">
+                                    <i data-feather="package" style="width: 80px; height: 80px; color: #6c757d;"></i>
+                                    <p class="mt-3 text-muted">No image available</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <label for="quantity" class="form-label fw-semibold">Quantity</label>
-                    <input type="number" class="form-control form-control-lg rounded-pill text-center shadow-sm" id="quantity" min="1" value="1">
+                    
+                    <div class="col-lg-6">
+                        <div id="productInfo">
+                            <div id="productCategory" class="mb-3"></div>
+                            <h1 id="productName" class="display-5 fw-bold mb-4"></h1>
+                            <div id="productPrice" class="display-4 text-success fw-bold mb-4"></div>
+                            <p id="productDescription" class="lead mb-4"></p>
+                            
+                            <div class="mb-4">
+                                <h5 class="fw-bold">Availability</h5>
+                                <div class="availability-info">
+                                    <div class="info-row">
+                                        <span class="info-label">In Stock:</span>
+                                        <span id="productQuantity" class="info-value"></span>
+                                    </div>
+                                    <div class="info-row">
+                                        <span class="info-label">Unit:</span>
+                                        <span id="productUnit" class="info-value"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <h5 class="fw-bold">Seller</h5>
+                                <p id="productSeller" class="mb-0"></p>
+                            </div>
+                            
+                            <div class="mb-5">
+                                <div class="row align-items-center">
+                                    <div class="col-auto">
+                                        <h5 class="fw-bold mb-0">Quantity</h5>
+                                    </div>
+                                    <div class="col-auto">
+                                        <div class="quantity-control">
+                                            <button type="button" class="quantity-btn" id="decreaseQty">−</button>
+                                            <input type="number" class="quantity-input" id="quantityInput" value="1" min="1" max="999">
+                                            <button type="button" class="quantity-btn" id="increaseQty">+</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid gap-3">
+                                <button type="button" class="btn btn-success btn-lg add-to-cart-btn" id="addToCartBtn">
+                                    <i data-feather="shopping-cart" class="me-2"></i>
+                                    Add to Cart
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-light px-4 rounded-pill shadow-sm" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-success px-4 rounded-pill shadow-sm" id="confirm-add-to-cart">Add to Cart</button>
+            </div>
+            
+            <div id="errorState" class="text-center d-none">
+                <div class="alert alert-danger">
+                    <h4>Product Not Found</h4>
+                    <p>The product you're looking for doesn't exist or has been removed.</p>
+                    <a href="/buyer/products.php" class="btn btn-outline-success">Back to Products</a>
                 </div>
             </div>
         </div>
@@ -69,119 +286,259 @@ if (!$productId) {
 
     <?php include '../includes/footer.php'; ?>
 
-    <!-- Scripts -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
     <script src="../assets/js/firebase.js"></script>
     <script src="../assets/js/main.js"></script>
+    <script src="../assets/js/dialogs.js"></script>
     <script src="../assets/js/cart.js"></script>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            feather.replace();
-            waitForFirebase(() => {
-                loadProductDetails('<?php echo $productId; ?>');
-                updateCartBadge();
+        let currentProduct = null;
+        let maxQuantity = 999;
+        let isAddingToCart = false;
 
-                document.getElementById('confirm-add-to-cart').addEventListener('click', function () {
-                    const quantity = parseInt(document.getElementById('quantity').value);
-                    if (quantity < 1) {
-                        alert('Please enter a valid quantity');
+        function showLoading() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        function updateQuantityDisplay(quantity) {
+            document.getElementById('quantityInput').value = quantity;
+            document.getElementById('addToCartBtn').disabled = quantity < 1 || quantity > maxQuantity;
+        }
+
+        function initQuantityControls() {
+            const decreaseBtn = document.getElementById('decreaseQty');
+            const increaseBtn = document.getElementById('increaseQty');
+            const quantityInput = document.getElementById('quantityInput');
+
+            decreaseBtn.onclick = function() {
+                const currentQty = parseInt(quantityInput.value);
+                if (currentQty > 1) {
+                    updateQuantityDisplay(currentQty - 1);
+                }
+            };
+
+            increaseBtn.onclick = function() {
+                const currentQty = parseInt(quantityInput.value);
+                if (currentQty < maxQuantity) {
+                    updateQuantityDisplay(currentQty + 1);
+                }
+            };
+
+            quantityInput.oninput = function() {
+                let qty = parseInt(quantityInput.value) || 1;
+                if (qty < 1) qty = 1;
+                if (qty > maxQuantity) qty = maxQuantity;
+                updateQuantityDisplay(qty);
+            };
+        }
+
+        async function loadProduct() {
+            showLoading();
+
+            waitForFirebase(async () => {
+                try {
+                    const doc = await firebase.firestore().collection('products').doc('<?php echo $productId; ?>').get();
+                    hideLoading();
+
+                    if (!doc.exists) {
+                        document.getElementById('productContent').classList.add('d-none');
+                        document.getElementById('errorState').classList.remove('d-none');
                         return;
                     }
-                    if (currentProduct) addToCart(currentProduct, quantity);
-                    bootstrap.Modal.getInstance(document.getElementById('addToCartModal')).hide();
+
+                    const data = doc.data();
+                    let sellerName = data.sellerName || 'Unknown Seller';
+
+                    // If seller name is not available in product data, fetch from users collection
+                    if (!data.sellerName && data.sellerId) {
+                        try {
+                            const userDoc = await firebase.firestore().collection('users').doc(data.sellerId).get();
+                            if (userDoc.exists) {
+                                const userData = userDoc.data();
+                                sellerName = userData.name || 'Unknown Seller';
+                            }
+                        } catch (userError) {
+                            console.warn('Could not fetch seller name from users collection:', userError);
+                        }
+                    }
+
+                    currentProduct = {
+                        id: doc.id,
+                        name: data.name || 'Unknown Product',
+                        price: data.price || 0,
+                        description: data.description || 'No description available.',
+                        category: data.category || 'Uncategorized',
+                        organic: !!data.organic,
+                        quantity: data.quantity || 0,
+                        unit: data.unit || 'kg',
+                        sellerId: data.sellerId || '',
+                        sellerName: sellerName,
+                        imageUrl: data.imageUrl || null,
+                        imageData: data.imageData || null
+                    };
+
+                    maxQuantity = Math.min(currentProduct.quantity, 999);
+                    updateQuantityDisplay(1);
+
+                    displayProduct();
+                    initQuantityControls();
+                    feather.replace();
+                } catch (error) {
+                    hideLoading();
+                    console.error('Error loading product:', error);
+                    document.getElementById('productContent').classList.add('d-none');
+                    document.getElementById('errorState').classList.remove('d-none');
+                }
+            });
+        }
+
+        function displayProduct() {
+            const product = currentProduct;
+
+            document.getElementById('productName').textContent = product.name;
+            document.getElementById('productPrice').textContent = `₱${product.price.toFixed(2)}`;
+            document.getElementById('productDescription').textContent = product.description;
+            const unit = product.unit || 'kg';
+            document.getElementById('productQuantity').textContent = product.quantity > 0 ? product.quantity : 'Out of Stock';
+            document.getElementById('productUnit').textContent = product.quantity > 0 ? unit : '';
+            document.getElementById('productSeller').textContent = product.sellerName;
+
+            const categoryDiv = document.getElementById('productCategory');
+            const displayCategory = product.category === 'Other' && product.specificName ? product.specificName : product.category;
+            categoryDiv.innerHTML = `
+                <span class="badge bg-success fs-6">${displayCategory}</span>
+                ${product.organic ? '<span class="badge bg-info fs-6 ms-2">Organic</span>' : ''}
+            `;
+
+            const productImage = document.getElementById('productImage');
+            const noImage = document.getElementById('noImage');
+            const imageSrc = product.imageUrl || product.imageData;
+
+            if (imageSrc) {
+                productImage.src = imageSrc;
+                productImage.alt = product.name;
+                productImage.classList.remove('d-none');
+                noImage.classList.add('d-none');
+            } else {
+                productImage.classList.add('d-none');
+                noImage.classList.remove('d-none');
+                feather.replace();
+            }
+
+            document.getElementById('addToCartBtn').disabled = product.quantity < 1;
+        }
+
+        function handleAddToCart() {
+            if (isAddingToCart) return;
+            
+            if (!currentProduct) {
+                showToast({
+                    title: 'Error',
+                    message: 'Product data not available.',
+                    type: 'error'
                 });
+                return;
+            }
+
+            const quantity = parseInt(document.getElementById('quantityInput').value);
+
+            if (quantity < 1) {
+                showToast({
+                    title: 'Invalid Quantity',
+                    message: 'Please enter a valid quantity.',
+                    type: 'warning'
+                });
+                return;
+            }
+
+            if (quantity > currentProduct.quantity) {
+                showToast({
+                    title: 'Insufficient Stock',
+                    message: `Only ${currentProduct.quantity} items available.`,
+                    type: 'warning'
+                });
+                return;
+            }
+
+            const addBtn = document.getElementById('addToCartBtn');
+            const originalText = addBtn.innerHTML;
+            addBtn.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div>Adding...';
+            addBtn.disabled = true;
+            isAddingToCart = true;
+
+            if (typeof window.addToCart === 'function') {
+                window.addToCart(currentProduct, quantity)
+                    .then(() => {
+                        showToast({
+                            title: 'Success!',
+                            message: `${currentProduct.name} has been added to your cart!`,
+                            type: 'success'
+                        });
+                        
+                        // Also show success dialog
+                        if (typeof showAlert === 'function') {
+                            showAlert({
+                                title: 'Added to Cart',
+                                message: `${currentProduct.name} has been successfully added to your cart!`,
+                                type: 'success'
+                            });
+                        }
+                        
+                        updateCartBadge();
+                        
+                        setTimeout(() => {
+                            addBtn.innerHTML = originalText;
+                            addBtn.disabled = currentProduct.quantity < 1;
+                            isAddingToCart = false;
+                        }, 1500);
+                    })
+                    .catch(error => {
+                        console.error('Error adding to cart:', error);
+                        showToast({
+                            title: 'Error',
+                            message: 'Failed to add item to cart. Please try again.',
+                            type: 'error'
+                        });
+                        
+                        addBtn.innerHTML = originalText;
+                        addBtn.disabled = false;
+                        isAddingToCart = false;
+                    });
+            } else {
+                showToast({
+                    title: 'Error',
+                    message: 'Cart functionality not available. Please refresh the page.',
+                    type: 'error'
+                });
+                
+                addBtn.innerHTML = originalText;
+                addBtn.disabled = false;
+                isAddingToCart = false;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadProduct();
+
+            const addToCartBtn = document.getElementById('addToCartBtn');
+            addToCartBtn.onclick = handleAddToCart;
+            
+            waitForFirebase(() => {
+                if (typeof updateCartBadge === 'function') {
+                    updateCartBadge();
+                }
             });
         });
-
-        let currentProduct = null;
-
-        function loadProductDetails(productId) {
-            const productDetailsContainer = document.getElementById('product-details-container');
-            const loading = document.getElementById('loading');
-
-            firebase.firestore().collection('products').doc(productId).get()
-                .then(doc => {
-                    loading.style.display = 'none';
-                    if (!doc.exists) {
-                        productDetailsContainer.innerHTML = `<div class="alert alert-danger rounded-4">Product not found or removed.</div>`;
-                        return;
-                    }
-
-                    const product = { id: doc.id, ...doc.data() };
-                    currentProduct = {
-                        id: product.id,
-                        name: product.name,
-                        price: product.price,
-                        sellerId: product.sellerId,
-                        sellerName: product.sellerName
-                    };
-
-                    let imagePlaceholder = {
-                        Vegetables: 'leaf',
-                        Fruits: 'aperture',
-                        Rice: 'package',
-                        Fish: 'fish',
-                        Meat: 'drumstick'
-                    }[product.category] || 'box';
-
-                    productDetailsContainer.innerHTML = `
-                        <div class="row g-4 align-items-center">
-                            <div class="col-md-5">
-                                <div class="bg-light rounded-4 p-4 text-center shadow-sm" style="height: 300px; display: flex; align-items: center; justify-content: center;">
-                                    <i data-feather="${imagePlaceholder}" style="width: 120px; height: 120px; color: var(--primary-color);"></i>
-                                </div>
-                            </div>
-                            <div class="col-md-7">
-                                <div class="mb-2">
-                                    <span class="badge bg-success px-3 py-2">${product.category}</span>
-                                    ${product.organic ? '<span class="badge bg-info px-3 py-2 ms-2">Organic</span>' : ''}
-                                </div>
-                                <h2 class="fw-bold mb-3">${product.name}</h2>
-                                <h3 class="text-success fw-bold mb-4">₱${product.price.toFixed(2)}</h3>
-                                <p class="text-secondary">${product.description}</p>
-
-                                <div class="d-flex align-items-center mb-4">
-                                    <div class="input-group me-3" style="width: 140px;">
-                                        <button class="btn btn-outline-secondary" type="button" id="decrease-quantity">-</button>
-                                        <input type="number" class="form-control text-center" id="product-quantity" value="1" min="1">
-                                        <button class="btn btn-outline-secondary" type="button" id="increase-quantity">+</button>
-                                    </div>
-                                    <button class="btn btn-success rounded-pill px-4" id="add-to-cart-btn">
-                                        <i data-feather="shopping-cart" class="me-1"></i> Add to Cart
-                                    </button>
-                                </div>
-
-                                <p><strong>Availability:</strong> ${product.quantity > 0 ? 'In Stock' : 'Out of Stock'}</p>
-                                <p><strong>Seller:</strong> ${product.sellerName}</p>
-                            </div>
-                        </div>
-                    `;
-
-                    feather.replace();
-                    document.getElementById('decrease-quantity').onclick = () => {
-                        let q = document.getElementById('product-quantity');
-                        if (q.value > 1) q.value--;
-                    };
-                    document.getElementById('increase-quantity').onclick = () => {
-                        let q = document.getElementById('product-quantity');
-                        q.value++;
-                    };
-                    document.getElementById('add-to-cart-btn').onclick = () => {
-                        const quantity = parseInt(document.getElementById('product-quantity').value);
-                        if (quantity > 0) addToCart(currentProduct, quantity);
-                    };
-                })
-                .catch(error => {
-                    loading.style.display = 'none';
-                    productDetailsContainer.innerHTML = `<div class="alert alert-danger rounded-4">Error loading product details. Please try again later.</div>`;
-                    console.error(error);
-                });
-        }
     </script>
 </body>
+
 </html>

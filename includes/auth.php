@@ -1,13 +1,19 @@
 <?php
-function isLoggedIn()
-{
+require_once __DIR__ . '/session.php';
+
+function isLoggedIn() {
     return isset($_SESSION['user_id']);
 }
 
-function ensureUserLoggedIn($requiredType = null)
-{
+function ensureUserLoggedIn($requiredType = null) {
     if (!isLoggedIn()) {
         header("Location: /login.php");
+        exit();
+    }
+
+    if ($_SESSION['user_type'] === 'seller' && 
+        (!isset($_SESSION['seller_approved']) || !$_SESSION['seller_approved'])) {
+        header("Location: /seller-approval.php");
         exit();
     }
 
@@ -22,20 +28,17 @@ function ensureUserLoggedIn($requiredType = null)
     }
 }
 
-function createUserSession($userId, $email, $name, $userType, $phone, $address)
-{
+function createUserSession($userId, $email, $name, $userType, $phone, $address, $emailVerified = false, $sellerApproved = false, $verified = false) {
     $_SESSION['user_id'] = $userId;
     $_SESSION['email'] = $email;
     $_SESSION['name'] = $name;
     $_SESSION['user_type'] = $userType;
     $_SESSION['phone'] = $phone;
     $_SESSION['address'] = $address;
-}
+    $_SESSION['email_verified'] = $emailVerified;
+    $_SESSION['verified'] = $verified;
 
-function logoutUser()
-{
-    $_SESSION = array();
-    session_destroy();
-    header("Location: /login.php");
-    exit();
+    if ($userType === 'seller') {
+        $_SESSION['seller_approved'] = $sellerApproved;
+    }
 }

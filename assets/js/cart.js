@@ -1,323 +1,143 @@
-function addToCart(product, quantity = 1) {
-    return new Promise((resolve, reject) => {
-        waitForFirebase(() => {
-            checkAuth()
-                .then(user => {
-                    const userId = user.uid;
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('Cart.js loaded');
+    initializeCart();
+});
 
-                    return firebase.firestore().collection('carts')
-                        .where('userId', '==', userId)
-                        .limit(1)
-                        .get()
-                        .then(snapshot => {
-                            if (snapshot.empty) {
-                                return firebase.firestore().collection('carts').add({
-                                    userId,
-                                    items: [{
-                                        productId: product.id,
-                                        name: product.name,
-                                        price: product.price,
-                                        quantity,
-                                        sellerId: product.sellerId,
-                                        sellerName: product.sellerName,
-                                        imageUrl: product.imageUrl || null
-                                    }],
-                                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                                });
-                            } else {
-                                const cartDoc = snapshot.docs[0];
-                                const cart = cartDoc.data();
-                                const existingItemIndex = cart.items.findIndex(item => item.productId === product.id);
-
-                                if (existingItemIndex !== -1) {
-                                    cart.items[existingItemIndex].quantity += quantity;
-                                } else {
-                                    cart.items.push({
-                                        productId: product.id,
-                                        name: product.name,
-                                        price: product.price,
-                                        quantity,
-                                        sellerId: product.sellerId,
-                                        sellerName: product.sellerName,
-                                        imageUrl: product.imageUrl || null
-                                    });
-                                }
-
-                                return firebase.firestore().collection('carts').doc(cartDoc.id).update({
-                                    items: cart.items,
-                                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                                });
-                            }
-                        })
-                        .then(() => {
-                            updateCartBadge();
-                            showToast({
-                                title: 'Added to Cart',
-                                message: `${quantity} ${quantity === 1 ? 'item' : 'items'} of ${product.name} added to cart!`,
-                                type: 'success'
-                            });
-                            resolve(`${product.name} added to cart!`);
-                        });
-                })
-                .catch(error => {
-                    console.error("Error adding to cart:", error);
-                    if (error.message === "User not authenticated") {
-                        showToast({
-                            title: 'Authentication Required',
-                            message: 'Please login to add items to cart.',
-                            type: 'warning'
-                        });
-                        setTimeout(() => {
-                            window.location.href = "/login.php";
-                        }, 2000);
-                        reject("Please login to add items to cart");
-                    } else {
-                        showToast({
-                            title: 'Error',
-                            message: 'Error adding to cart. Please try again later.',
-                            type: 'error'
-                        });
-                        reject("Error adding to cart. Please try again later.");
-                    }
-                });
-        });
-    });
-}
-
-function removeFromCart(cartId, productId, productName = 'Item') {
-    return new Promise((resolve, reject) => {
-        showConfirm({
-            title: 'Remove Item',
-            message: `Are you sure you want to remove "${productName}" from your cart?`,
-            type: 'warning',
-            confirmText: 'Remove',
-            cancelText: 'Cancel',
-            onConfirm: () => {
-                waitForFirebase(() => {
-                    firebase.firestore().collection('carts').doc(cartId).get()
-                        .then(doc => {
-                            if (!doc.exists) throw new Error("Cart not found");
-                            const updatedItems = doc.data().items.filter(item => item.productId !== productId);
-                            return firebase.firestore().collection('carts').doc(cartId).update({
-                                items: updatedItems,
-                                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                            });
-                        })
-                        .then(() => {
-                            updateCartBadge();
-                            showToast({
-                                title: 'Item Removed',
-                                message: `${productName} has been removed from your cart.`,
-                                type: 'success'
-                            });
-                            resolve("Item removed from cart");
-                        })
-                        .catch(err => {
-                            console.error("Error removing from cart:", err);
-                            showToast({
-                                title: 'Error',
-                                message: 'Error removing item from cart. Please try again later.',
-                                type: 'error'
-                            });
-                            reject("Error removing item from cart. Please try again later.");
-                        });
-                });
-            },
-            onCancel: () => {
-                reject("Operation cancelled");
+function initializeCart() {
+    waitForFirebase(() => {
+        firebase.auth().onAuthStateChanged(user => {
+            if (user) {
+                window.currentUserId = user.uid;
+                console.log('Cart user ID set:', user.uid);
+                updateCartBadge();
+            } else {
+                console.log('No user logged in for cart operations');
             }
         });
     });
 }
 
-function updateCartItemQuantity(cartId, productId, newQuantity, productName = 'Item') {
-    if (newQuantity < 1) {
-        return removeFromCart(cartId, productId, productName);
+window.addToCart = async function(product, quantity = 1) {
+    try {
+        await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('Firebase auth timeout')), 10000);
+            
+            firebase.auth().onAuthStateChanged(user => {
+                clearTimeout(timeout);
+                if (user) {
+                    resolve(user.uid);
+                } else {
+                    reject(new Error('User not logged in'));
+                }
+            }, { onlyOnce: true });
+        }).then(userId => {
+            return addToCartInternal(userId, product, quantity);
+        });
+        
+        return true;
+    } catch (error) {
+        console.error('Error adding to cart:', error);
+        throw error;
+    }
+};
+
+async function addToCartInternal(userId, product, quantity) {
+    const cartRef = firebase.firestore().collection('carts').doc(userId);
+    const cartDoc = await cartRef.get();
+
+    let cartData = {
+        userId: userId,
+        items: [],
+        updatedAt: firebase.firestore.Timestamp.now()
+    };
+
+    if (cartDoc.exists) {
+        cartData = cartDoc.data();
+        cartData.updatedAt = firebase.firestore.Timestamp.now();
     }
 
-    return new Promise((resolve, reject) => {
-        waitForFirebase(() => {
-            firebase.firestore().collection('carts').doc(cartId).get()
-                .then(doc => {
-                    if (!doc.exists) throw new Error("Cart not found");
-                    const cart = doc.data();
-                    const itemIndex = cart.items.findIndex(item => item.productId === productId);
-                    if (itemIndex === -1) throw new Error("Item not found in cart");
-                    
-                    cart.items[itemIndex].quantity = newQuantity;
-                    return firebase.firestore().collection('carts').doc(cartId).update({
-                        items: cart.items,
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                })
-                .then(() => {
-                    updateCartBadge();
-                    showToast({
-                        title: 'Quantity Updated',
-                        message: `Quantity of ${productName} updated to ${newQuantity}.`,
-                        type: 'success'
-                    });
-                    resolve("Quantity updated");
-                })
-                .catch(err => {
-                    console.error("Error updating cart item quantity:", err);
-                    showToast({
-                        title: 'Error',
-                        message: 'Error updating quantity. Please try again later.',
-                        type: 'error'
-                    });
-                    reject("Error updating quantity. Please try again later.");
-                });
+    if (!cartData.items) {
+        cartData.items = [];
+    }
+
+    const existingItemIndex = cartData.items.findIndex(item =>
+        (item.productId === product.id) || (item.id === product.id)
+    );
+
+    if (existingItemIndex >= 0) {
+        cartData.items[existingItemIndex].quantity += quantity;
+        // Ensure all fields are present
+        cartData.items[existingItemIndex].productId = product.id;
+        cartData.items[existingItemIndex].productName = product.name;
+        cartData.items[existingItemIndex].name = product.name;
+        cartData.items[existingItemIndex].price = product.price;
+        cartData.items[existingItemIndex].sellerId = product.sellerId || '';
+        cartData.items[existingItemIndex].sellerName = product.sellerName || '';
+        cartData.items[existingItemIndex].imageUrl = product.imageUrl || null;
+        cartData.items[existingItemIndex].imageData = product.imageData || null;
+    } else {
+        cartData.items.push({
+            productId: product.id,
+            id: product.id,
+            productName: product.name,
+            name: product.name,
+            price: product.price,
+            quantity: quantity,
+            sellerId: product.sellerId || '',
+            sellerName: product.sellerName || '',
+            imageUrl: product.imageUrl || null,
+            imageData: product.imageData || null,
+            addedAt: firebase.firestore.Timestamp.now()
         });
-    });
+    }
+
+    await cartRef.set(cartData);
+    console.log('Product added to cart:', product.name);
+
+    if (typeof showToast === 'function') {
+        showToast({
+            title: 'Added to Cart',
+            message: `${product.name} has been added to your cart.`,
+            type: 'success'
+        });
+    } else if (typeof showAlert === 'function') {
+        showAlert({
+            title: 'Added to Cart',
+            message: `${product.name} has been added to your cart.`,
+            type: 'success'
+        });
+    } else {
+        alert(`${product.name} has been added to your cart.`);
+    }
+
+    return true;
 }
 
-function clearCart(cartId) {
-    return new Promise((resolve, reject) => {
-        showConfirm({
-            title: 'Clear Cart',
-            message: 'Are you sure you want to remove all items from your cart? This action cannot be undone.',
-            type: 'warning',
-            confirmText: 'Clear Cart',
-            cancelText: 'Cancel',
-            onConfirm: () => {
-                waitForFirebase(() => {
-                    firebase.firestore().collection('carts').doc(cartId).update({
-                        items: [],
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    })
-                    .then(() => {
-                        updateCartBadge();
-                        showToast({
-                            title: 'Cart Cleared',
-                            message: 'All items have been removed from your cart.',
-                            type: 'success'
-                        });
-                        resolve("Cart cleared");
-                    })
-                    .catch(err => {
-                        console.error("Error clearing cart:", err);
-                        showToast({
-                            title: 'Error',
-                            message: 'Error clearing cart. Please try again later.',
-                            type: 'error'
-                        });
-                        reject("Error clearing cart. Please try again later.");
-                    });
-                });
-            },
-            onCancel: () => {
-                reject("Operation cancelled");
-            }
-        });
-    });
-}
-
-function getUserCart() {
-    return new Promise((resolve, reject) => {
-        waitForFirebase(() => {
-            checkAuth()
-                .then(user => {
-                    return firebase.firestore().collection('carts')
-                        .where('userId', '==', user.uid)
-                        .limit(1)
-                        .get()
-                        .then(snapshot => {
-                            if (snapshot.empty) {
-                                resolve(null);
-                            } else {
-                                const doc = snapshot.docs[0];
-                                resolve({ id: doc.id, ...doc.data() });
-                            }
-                        });
-                })
-                .catch(err => {
-                    console.error("Error getting user cart:", err);
-                    if (err.message === "User not authenticated") {
-                        showToast({
-                            title: 'Authentication Required',
-                            message: 'Please login to view your cart.',
-                            type: 'warning'
-                        });
-                        setTimeout(() => {
-                            window.location.href = "/login.php";
-                        }, 2000);
-                    }
-                    reject(err);
-                });
-        });
-    });
-}
-
-function updateCartBadge() {
+window.updateCartBadge = function() {
     const badge = document.getElementById('cart-badge');
-    if (!badge) return Promise.resolve();
+    if (!badge) return;
 
-    return new Promise((resolve, reject) => {
-        waitForFirebase(() => {
-            checkAuth()
-                .then(user => {
-                    return firebase.firestore().collection('carts')
-                        .where('userId', '==', user.uid)
-                        .limit(1)
-                        .get()
-                        .then(snapshot => {
-                            if (snapshot.empty) {
-                                badge.textContent = '0';
-                            } else {
-                                const cart = snapshot.docs[0].data();
-                                const totalItems = (cart.items || []).reduce((sum, item) => sum + item.quantity, 0);
-                                badge.textContent = totalItems.toString();
-                            }
-                            resolve();
-                        });
-                })
-                .catch(err => {
-                    if (err.message !== "User not authenticated") {
-                        console.error("Error updating cart badge:", err);
-                    }
-                    badge.textContent = '0';
-                    resolve(); // Still resolve even on error for badge updates
-                });
-        });
-    });
-}
-
-// Enhanced cart functions with better UX
-function checkoutCart(cartId, cartItems) {
-    return new Promise((resolve, reject) => {
-        if (!cartItems || cartItems.length === 0) {
-            showToast({
-                title: 'Empty Cart',
-                message: 'Your cart is empty. Please add some items before checkout.',
-                type: 'warning'
-            });
-            reject("Cart is empty");
+    firebase.auth().onAuthStateChanged(user => {
+        if (!user) {
+            badge.textContent = '0';
             return;
         }
 
-        const totalAmount = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        
-        showConfirm({
-            title: 'Confirm Checkout',
-            message: `Total amount: ₱${totalAmount.toFixed(2)}\n\nAre you sure you want to proceed with checkout?`,
-            type: 'info',
-            confirmText: 'Proceed to Checkout',
-            cancelText: 'Review Cart',
-            onConfirm: () => {
-                // Redirect to checkout page
-                window.location.href = '/buyer/checkout.php';
-                resolve("Proceeding to checkout");
-            },
-            onCancel: () => {
-                reject("Checkout cancelled");
-            }
-        });
+        firebase.firestore().collection('carts')
+            .doc(user.uid)
+            .get()
+            .then(doc => {
+                let totalItems = 0;
+                if (doc.exists) {
+                    const cart = doc.data();
+                    const items = Array.isArray(cart.items) ? cart.items : [];
+                    totalItems = items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+                }
+                badge.textContent = totalItems;
+            })
+            .catch(error => {
+                console.error("Error updating cart badge: ", error);
+                badge.textContent = '0';
+            });
     });
-}
-
-// Initialize cart badge on page load
-document.addEventListener('DOMContentLoaded', function() {
-    updateCartBadge();
-});
+};

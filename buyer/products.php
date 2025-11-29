@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../includes/session.php';
 include '../includes/auth.php';
 include '../includes/functions.php';
 ensureUserLoggedIn('buyer');
@@ -22,7 +22,6 @@ $search   = isset($_GET['search']) ? htmlspecialchars($_GET['search']) : '';
 
     <main class="main-content">
         <div class="container">
-            <!-- Page Header -->
             <div class="page-header">
                 <h1 class="page-title">Browse Agricultural Products</h1>
                 <p class="page-subtitle">Discover fresh, high-quality products from local farmers</p>
@@ -31,7 +30,7 @@ $search   = isset($_GET['search']) ? htmlspecialchars($_GET['search']) : '';
             <!-- Search & Cart Bar -->
             <div class="search-cart-bar">
                 <div class="search-section">
-                    <form action="products.php" method="get" class="search-form">
+                    <form action="/buyer/products.php" method="get" class="search-form">
                         <div class="search-input-group">
                             <input type="text" name="search" class="search-input" placeholder="Search products..." value="<?php echo $search; ?>">
                             <button type="submit" class="search-button">
@@ -41,7 +40,7 @@ $search   = isset($_GET['search']) ? htmlspecialchars($_GET['search']) : '';
                     </form>
                 </div>
                 <div class="cart-section">
-                    <a href="cart.php" class="cart-button">
+                    <a href="/buyer/cart.php" class="cart-button">
                         <span class="cart-icon">🛒</span>
                         View Cart
                         <span class="cart-badge" id="cart-badge">0</span>
@@ -57,7 +56,16 @@ $search   = isset($_GET['search']) ? htmlspecialchars($_GET['search']) : '';
                     foreach ($categories as $cat) {
                         $active = $category === $cat ? 'active' : '';
                         $label = $cat === '' ? 'All Products' : $cat;
-                        echo "<li class='category-item'><a class='category-link $active' href='products.php" . ($cat ? "?category=$cat" : "") . "'>$label</a></li>";
+                        $url = '/buyer/products.php';
+                        if ($cat !== '') {
+                            $url .= "?category=" . urlencode($cat);
+                            if ($search) {
+                                $url .= "&search=" . urlencode($search);
+                            }
+                        } else if ($search) {
+                            $url .= "?search=" . urlencode($search);
+                        }
+                        echo "<li class='category-item'><a class='category-link $active' href='$url'>$label</a></li>";
                     }
                     ?>
                 </ul>
@@ -66,15 +74,12 @@ $search   = isset($_GET['search']) ? htmlspecialchars($_GET['search']) : '';
             <!-- Products Grid -->
             <div class="products-section">
                 <div class="products-grid" id="products-container">
-                    <div class="loading-state" id="loading">
-                        <div class="loading-spinner"></div>
-                        <p class="loading-text">Loading products...</p>
-                    </div>
                     <div class="empty-state d-none" id="no-products">
                         <div class="empty-icon">📦</div>
                         <h3 class="empty-title">No products found</h3>
                         <p class="empty-description">Try a different search or category.</p>
                     </div>
+                    <!-- Loading state will be added here -->
                 </div>
             </div>
         </div>
@@ -86,9 +91,11 @@ $search   = isset($_GET['search']) ? htmlspecialchars($_GET['search']) : '';
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="../assets/js/firebase.js"></script>
-    <script src="../assets/js/main.js"></script>
+    <script src="../assets/js/app.js"></script>
+    <script src="../assets/js/services/cartService.js"></script>
     <script src="../assets/js/cart.js"></script>
     <script src="../assets/js/dialogs.js"></script>
+    <script src="../assets/js/main.js"></script>
 
     <style>
         .main-content {
@@ -266,20 +273,50 @@ $search   = isset($_GET['search']) ? htmlspecialchars($_GET['search']) : '';
         .product-card {
             background: white;
             border-radius: var(--radius-xl);
-            box-shadow: var(--shadow-md);
-            border: 1px solid var(--gray-200);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+            border: 1px solid var(--neutral-200);
             overflow: hidden;
             transition: all var(--transition-normal);
+            position: relative;
         }
 
         .product-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-lg);
+            transform: translateY(-8px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            border-color: var(--primary-200);
+        }
+
+        .product-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-500), var(--accent-500));
+            opacity: 0;
+            transition: opacity var(--transition-fast);
+        }
+
+        .product-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-500), var(--accent-500));
+            opacity: 0;
+            transition: opacity var(--transition-fast);
+        }
+
+        .product-card:hover::before {
+            opacity: 1;
         }
 
         .product-image {
-            height: 200px;
-            background: linear-gradient(135deg, var(--gray-50), var(--primary-50));
+            height: 220px;
+            background: linear-gradient(135deg, var(--neutral-50), var(--primary-50));
             display: flex;
             align-items: center;
             justify-content: center;
@@ -290,47 +327,157 @@ $search   = isset($_GET['search']) ? htmlspecialchars($_GET['search']) : '';
         .product-image img {
             max-height: 100%;
             max-width: 100%;
-            object-fit: contain;
+            object-fit: cover;
+            transition: transform var(--transition-normal);
+        }
+
+        .product-card:hover .product-image img {
+            transform: scale(1.05);
+        }
+
+        .availability-badges {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            z-index: 10;
+        }
+
+        .availability-badge {
+            padding: 6px 12px;
+            border-radius: var(--radius-full);
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            white-space: nowrap;
+        }
+
+        .badge-success {
+            background: rgba(34, 197, 94, 0.95);
+            color: white;
+            box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+        }
+
+        .badge-danger {
+            background: rgba(239, 68, 68, 0.95);
+            color: white;
+            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+        }
+
+        .badge-info {
+            background: rgba(14, 165, 233, 0.95);
+            color: white;
+            box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
+        }
+
+        .badge-info {
+            background: rgba(14, 165, 233, 0.95);
+            color: white;
+            box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
         }
 
         .product-content {
             padding: var(--space-6);
+            background: white;
         }
 
         .product-title {
-            font-size: 1.25rem;
+            font-size: 1.125rem;
             font-weight: 600;
-            color: var(--gray-900);
+            color: var(--neutral-900);
             margin-bottom: var(--space-2);
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
         }
 
         .product-price {
-            font-size: 1.5rem;
+            font-size: 1.25rem;
             font-weight: 700;
             color: var(--primary-600);
             margin-bottom: var(--space-3);
+            display: flex;
+            align-items: center;
+            gap: var(--space-1);
+        }
+
+        .product-price::before {
+            content: '₱';
+            font-size: 0.875rem;
+            color: var(--neutral-500);
         }
 
         .product-description {
-            color: var(--gray-600);
+            color: var(--neutral-600);
             margin-bottom: var(--space-4);
-            line-height: 1.6;
+            line-height: 1.5;
+            font-size: 0.875rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
         }
 
         .product-seller {
-            color: var(--gray-500);
-            font-size: 0.875rem;
+            color: var(--neutral-500);
+            font-size: 0.75rem;
             margin-bottom: var(--space-4);
+            font-weight: 500;
         }
 
         .product-actions {
             display: flex;
             gap: var(--space-3);
+            margin-top: auto;
         }
 
         .product-actions .btn {
             flex: 1;
             justify-content: center;
+            padding: var(--space-3) var(--space-4);
+            font-size: 0.875rem;
+            font-weight: 600;
+            border-radius: var(--radius-lg);
+            transition: all var(--transition-fast);
+            border: 1px solid transparent;
+        }
+
+        .product-actions .btn-outline-primary {
+            background: transparent;
+            color: var(--primary-600);
+            border-color: var(--primary-200);
+        }
+
+        .product-actions .btn-outline-primary:hover {
+            background: var(--primary-50);
+            border-color: var(--primary-300);
+            color: var(--primary-700);
+            transform: translateY(-1px);
+        }
+
+        .product-actions .btn-primary {
+            background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+            color: white;
+            box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
+        }
+
+        .product-actions .btn-primary:hover:not(:disabled) {
+            background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
+        }
+
+        .product-actions .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
         }
 
         .loading-state {
@@ -449,199 +596,284 @@ $search   = isset($_GET['search']) ? htmlspecialchars($_GET['search']) : '';
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             waitForFirebase(() => {
+                // Set global user ID for cart functions
+                window.currentUserId = '<?php echo isset($_SESSION['user_id']) ? $_SESSION['user_id'] : ''; ?>';
                 loadProducts();
                 updateCartBadge();
             });
         });
 
         let currentProduct = null;
+        let allProducts = [];
 
-        function loadProducts() {
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        async function loadProducts() {
             const category = '<?php echo $category; ?>';
             const search = '<?php echo $search; ?>';
             const productsContainer = document.getElementById('products-container');
-            const loading = document.getElementById('loading');
             const noProducts = document.getElementById('no-products');
 
-            let query = firebase.firestore().collection('products');
-            if (category) query = query.where('category', '==', category);
+            if (window.loadingOverlay) {
+                window.loadingOverlay.show('Loading products...');
+            }
 
-            query.get().then(snapshot => {
-                loading.style.display = 'none';
+            try {
+                let query = firebase.firestore().collection('products');
+
+                if (category && category !== '') {
+                    query = query.where('category', '==', category);
+                }
+
+                const snapshot = await query.get();
+                if (window.loadingOverlay) window.loadingOverlay.hide();
                 if (snapshot.empty) {
                     noProducts.classList.remove('d-none');
                     return;
                 }
-                productsContainer.innerHTML = '';
-                const products = [];
-                snapshot.forEach(doc => products.push({
-                    id: doc.id,
-                    ...doc.data()
-                }));
 
-                let filteredProducts = products;
+                productsContainer.innerHTML = '';
+                allProducts = [];
+                snapshot.forEach(doc => allProducts.push(Object.assign({ id: doc.id }, doc.data())));
+
+                // Fetch seller names for all products that don't have them
+                const sellerPromises = allProducts.map(async (product) => {
+                    if (!product.sellerName && product.sellerId) {
+                        try {
+                            const userDoc = await firebase.firestore().collection('users').doc(product.sellerId).get();
+                            if (userDoc.exists) {
+                                const userData = userDoc.data();
+                                product.sellerName = userData.name || 'Unknown Seller';
+                            }
+                        } catch (userError) {
+                            console.warn('Could not fetch seller name for product:', product.id, userError);
+                        }
+                    }
+                    return product;
+                });
+
+                allProducts = await Promise.all(sellerPromises);
+
+                let filteredProducts = allProducts;
                 if (search) {
-                    filteredProducts = products.filter(p =>
-                        p.name.toLowerCase().includes(search.toLowerCase()) ||
-                        p.description.toLowerCase().includes(search.toLowerCase())
-                    );
+                    const q = search.toLowerCase();
+                    filteredProducts = allProducts.filter(p => {
+                        const name = (p.name || '').toString().toLowerCase();
+                        const desc = (p.description || '').toString().toLowerCase();
+                        return name.includes(q) || desc.includes(q);
+                    });
                 }
+
                 if (filteredProducts.length === 0) {
                     noProducts.classList.remove('d-none');
                     return;
                 }
 
-                filteredProducts.forEach(product => {
-                    const productCard = document.createElement('div');
-                    productCard.className = 'product-card';
+                const productsWithSellerNames = filteredProducts;
 
-                    const hasImage = !!product.imageData;
-                    let imagePlaceholder = '📦';
-                    if (!hasImage) {
-                        const map = {
+                productsWithSellerNames.forEach(product => {
+                    try {
+                        const productCard = document.createElement('div');
+                        productCard.className = 'product-card';
+
+                        const hasImage = !!(product.imageData || product.imageUrl);
+                        let imagePlaceholder = '📦';
+                        const imageMap = {
                             Vegetables: '🥬',
                             Fruits: '🍎',
                             Rice: '🌾',
                             Fish: '🐟',
                             Meat: '🥩'
                         };
-                        if (map[product.category]) {
-                            imagePlaceholder = map[product.category];
+                        if (!hasImage && imageMap[product.category]) {
+                            imagePlaceholder = imageMap[product.category];
                         }
-                    }
 
-                    productCard.innerHTML = `
-                        <div class="product-image">
-                            ${hasImage ? `<img src="${product.imageData}" alt="${product.name}">` : `<span style="font-size: 4rem;">${imagePlaceholder}</span>`}
-                        </div>
-                        <div class="product-content">
-                            <h3 class="product-title">${product.name}</h3>
-                            <div class="product-price">₱${product.price.toFixed(2)}</div>
-                            <p class="product-description">${product.description.substring(0, 80)}${product.description.length > 80 ? '...' : ''}</p>
-                            <p class="product-seller">Seller: ${product.sellerName}</p>
-                            <div class="product-actions">
-                                <button class="btn btn-outline-primary view-details" data-id="${product.id}">View Details</button>
-                                <button class="btn btn-primary add-to-cart"
-                                    data-id="${product.id}" data-name="${product.name}"
-                                    data-price="${product.price}" data-seller="${product.sellerId}"
-                                    data-seller-name="${product.sellerName}">
-                                    Add to Cart
-                                </button>
+                        const priceNum = Number(product.price) || 0;
+                        const descText = (product.description || '').toString();
+                        const shortDesc = descText.length > 80 ? descText.substring(0, 80) + '...' : descText;
+                        const sellerName = product.sellerName || 'Unknown Seller';
+                        const prodName = product.name || 'Untitled Product';
+                        const imageSrc = product.imageUrl || product.imageData || null;
+                        const quantity = Number(product.quantity) || 0;
+                        const unit = product.unit || 'kg';
+                        const isOutOfStock = quantity <= 0;
+                        const statusText = isOutOfStock ? 'Out of Stock' : `In Stock (${quantity})`;
+                        const unitText = isOutOfStock ? '' : `Unit : ${unit}`;
+                        const statusClass = isOutOfStock ? 'badge-danger' : 'badge-success';
+                        const unitClass = 'badge-info';
+
+                        productCard.innerHTML = `
+                            <div class="product-image">
+                                ${hasImage ? `<img src="${imageSrc}" alt="${escapeHtml(prodName)}">` : `<span style="font-size: 4rem;">${imagePlaceholder}</span>`}
+                                <div class="availability-badges">
+                                    <div class="availability-badge ${statusClass}">${statusText}</div>
+                                    ${unitText ? `<div class="availability-badge ${unitClass}">${unitText}</div>` : ''}
+                                </div>
                             </div>
-                        </div>
-                    `;
-                    productsContainer.appendChild(productCard);
+                            <div class="product-content">
+                                <h3 class="product-title">${escapeHtml(prodName)}</h3>
+                                <div class="product-price">₱${priceNum.toFixed(2)}</div>
+                                <p class="product-description">${escapeHtml(shortDesc)}</p>
+                                <p class="product-seller">Seller: ${escapeHtml(sellerName)}</p>
+                                <div class="product-actions">
+                                    <button class="btn btn-outline-primary view-details" data-id="${product.id}">View Details</button>
+                                    <button class="btn btn-primary add-to-cart ${isOutOfStock ? 'disabled' : ''}"
+                                        data-id="${product.id}" data-name="${escapeHtml(prodName)}"
+                                        data-price="${priceNum}" data-seller="${product.sellerId || ''}"
+                                        data-seller-name="${escapeHtml(sellerName)}" ${isOutOfStock ? 'disabled' : ''}>
+                                        <i class="fas fa-cart-plus"></i> Add to Cart
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                        productsContainer.appendChild(productCard);
+                    } catch (e) {
+                        console.error('Error rendering product', product, e);
+                    }
                 });
 
                 // Add event listeners
                 document.querySelectorAll('.view-details').forEach(btn => {
                     btn.addEventListener('click', () => {
-                        window.location.href = `product_details.php?id=${btn.dataset.id}`;
+                        window.location.href = `/buyer/product_details.php?id=${btn.dataset.id}`;
                     });
                 });
 
                 document.querySelectorAll('.add-to-cart').forEach(btn => {
                     btn.addEventListener('click', () => {
-                        currentProduct = {
+                        const productData = {
                             id: btn.dataset.id,
                             name: btn.dataset.name,
-                            price: parseFloat(btn.dataset.price),
-                            sellerId: btn.dataset.seller,
-                            sellerName: btn.dataset.sellerName
+                            price: parseFloat(btn.dataset.price) || 0,
+                            sellerId: btn.dataset.seller || '',
+                            sellerName: btn.dataset.sellerName || 'Unknown Seller'
                         };
+
+                        const productFromList = allProducts.find(p => p.id === productData.id);
+                        if (productFromList) {
+                            productData.imageUrl = productFromList.imageUrl || null;
+                            productData.imageData = productFromList.imageData || null;
+                        }
+
+                        currentProduct = productData;
                         showAddToCartDialog();
                     });
                 });
 
-            }).catch(err => {
-                loading.style.display = 'none';
+            } catch (err) {
+                if (window.loadingOverlay) window.loadingOverlay.hide();
                 console.error("Error getting products: ", err);
                 showToast({
                     title: 'Error',
                     message: 'Error loading products. Please try again later.',
                     type: 'error'
                 });
-            });
+            }
         }
 
         function showAddToCartDialog() {
-            const quantity = prompt(`How many "${currentProduct.name}" would you like to add to cart?`, '1');
-            const qty = parseInt(quantity);
-
-            if (isNaN(qty) || qty < 1) {
-                showToast({
-                    title: 'Invalid Quantity',
-                    message: 'Please enter a valid quantity (minimum 1).',
-                    type: 'warning'
-                });
-                return;
-            }
-
-            addToCart(currentProduct, qty);
-        }
-
-        function addToCart(product, quantity) {
-            const userId = '<?php echo $_SESSION['user_id']; ?>';
-
-            firebase.firestore().collection('carts')
-                .where('userId', '==', userId)
-                .where('productId', '==', product.id)
-                .get()
-                .then(snapshot => {
-                    if (snapshot.empty) {
-                        // Add new item to cart
-                        return firebase.firestore().collection('carts').add({
-                            userId: userId,
-                            productId: product.id,
-                            productName: product.name,
-                            price: product.price,
-                            quantity: quantity,
-                            sellerId: product.sellerId,
-                            sellerName: product.sellerName,
-                            addedAt: firebase.firestore.FieldValue.serverTimestamp()
+            if (typeof dialogs !== 'undefined' && typeof dialogs.prompt === 'function') {
+                dialogs.prompt({
+                    title: 'Add to Cart',
+                    message: `How many "${currentProduct.name}" would you like to add to cart?`,
+                    type: 'info',
+                    placeholder: 'Quantity',
+                    defaultValue: '1'
+                }).then(value => {
+                    if (value === null) return;
+                    const qty = parseInt(value);
+                    if (isNaN(qty) || qty < 1) {
+                        showToast({
+                            title: 'Invalid Quantity',
+                            message: 'Please enter a valid quantity (minimum 1).',
+                            type: 'warning'
                         });
+                        return;
+                    }
+                    if (typeof window.addToCart === 'function') {
+                        window.addToCart(currentProduct, qty)
+                            .then(() => {
+                                updateCartBadge();
+                            })
+                            .catch(err => {
+                                console.error('Error adding to cart:', err);
+                            });
                     } else {
-                        // Update existing item quantity
-                        const doc = snapshot.docs[0];
-                        return doc.ref.update({
-                            quantity: doc.data().quantity + quantity
+                        console.error('addToCart function not available');
+                        showToast({
+                            title: 'Error',
+                            message: 'Add to cart function is not available. Please refresh the page.',
+                            type: 'error'
                         });
                     }
-                })
-                .then(() => {
+                }).catch(err => {
+                    console.error('Prompt error', err);
+                    showToast({ title: 'Error', message: 'Could not add to cart.', type: 'error' });
+                });
+            } else {
+                // Fallback to browser prompt
+                const qty = parseInt(prompt(`How many "${currentProduct.name}" would you like to add to cart?`, '1'));
+                if (isNaN(qty) || qty < 1) {
                     showToast({
-                        title: 'Success',
-                        message: `${quantity} ${quantity === 1 ? 'item' : 'items'} added to cart!`,
-                        type: 'success'
+                        title: 'Invalid Quantity',
+                        message: 'Please enter a valid quantity (minimum 1).',
+                        type: 'warning'
                     });
-                    updateCartBadge();
-                })
-                .catch(error => {
-                    console.error("Error adding to cart: ", error);
+                    return;
+                }
+                if (typeof window.addToCart === 'function') {
+                    window.addToCart(currentProduct, qty)
+                        .then(() => {
+                            updateCartBadge();
+                        })
+                        .catch(err => {
+                            console.error('Error adding to cart:', err);
+                        });
+                } else {
+                    console.error('addToCart function not available');
                     showToast({
                         title: 'Error',
-                        message: 'Failed to add item to cart. Please try again.',
+                        message: 'Add to cart function is not available. Please refresh the page.',
                         type: 'error'
                     });
-                });
+                }
+            }
         }
 
         function updateCartBadge() {
-            const userId = '<?php echo $_SESSION['user_id']; ?>';
+            const badge = document.getElementById('cart-badge');
+            if (!badge) return;
+
+            const userId = '<?php echo isset($_SESSION['user_id']) ? $_SESSION['user_id'] : ''; ?>';
+
+            if (!userId) {
+                badge.textContent = '0';
+                return;
+            }
 
             firebase.firestore().collection('carts')
-                .where('userId', '==', userId)
+                .doc(userId)
                 .get()
-                .then(snapshot => {
+                .then(doc => {
                     let totalItems = 0;
-                    snapshot.forEach(doc => {
+                    if (doc.exists) {
                         const cart = doc.data();
-                        totalItems += cart.quantity || 0;
-                    });
-                    document.getElementById('cart-badge').textContent = totalItems;
+                        const items = Array.isArray(cart.items) ? cart.items : [];
+                        totalItems = items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+                    }
+                    badge.textContent = totalItems;
                 })
                 .catch(error => {
                     console.error("Error updating cart badge: ", error);
+                    badge.textContent = '0';
                 });
         }
     </script>

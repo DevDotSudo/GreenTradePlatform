@@ -32,7 +32,6 @@ function getProducts(options = {}) {
     });
 }
 
-// Get a single product by ID
 function getProduct(productId) {
     return waitForFirebase(() => {
         return firebase.firestore().collection('products').doc(productId).get()
@@ -46,7 +45,6 @@ function getProduct(productId) {
     });
 }
 
-// Add a new product
 function addProduct(productData) {
     return waitForFirebase(() => {
         return firebase.firestore().collection('products').add({
@@ -57,7 +55,6 @@ function addProduct(productData) {
     });
 }
 
-// Update an existing product
 function updateProduct(productId, productData) {
     return waitForFirebase(() => {
         return firebase.firestore().collection('products').doc(productId).update({
@@ -67,14 +64,12 @@ function updateProduct(productId, productData) {
     });
 }
 
-// Delete a product
 function deleteProduct(productId) {
     return waitForFirebase(() => {
         return firebase.firestore().collection('products').doc(productId).delete();
     });
 }
 
-// Search products by name or description
 function searchProducts(searchTerm) {
     return getProducts({ limit: 100 }).then(products => {
         const lowerSearchTerm = searchTerm.toLowerCase();
@@ -85,17 +80,14 @@ function searchProducts(searchTerm) {
     });
 }
 
-// Get products by category
 function getProductsByCategory(category) {
     return getProducts({ category });
 }
 
-// Get seller's products
 function getSellerProducts(sellerId) {
     return getProducts({ sellerId });
 }
 
-// Upload product image to Firebase Storage
 function uploadProductImage(productId, file) {
     return waitForFirebase(() => {
         const storageRef = firebase.storage().ref();
@@ -110,7 +102,6 @@ function uploadProductImage(productId, file) {
     });
 }
 
-// Format product price
 function formatProductPrice(price) {
     return '₱' + parseFloat(price).toFixed(2);
 }

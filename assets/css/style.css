@@ -1,6 +1,6 @@
-/* Modern Design System for GreenTradePlatform */
+/* Green Theme Design System for GreenTradePlatform */
 :root {
-  /* Color Palette */
+  /* Green Primary Color Palette */
   --primary-50: #f0fdf4;
   --primary-100: #dcfce7;
   --primary-200: #bbf7d0;
@@ -11,42 +11,58 @@
   --primary-700: #15803d;
   --primary-800: #166534;
   --primary-900: #14532d;
-  
-  --accent-50: #fff7ed;
-  --accent-100: #ffedd5;
-  --accent-200: #fed7aa;
-  --accent-300: #fdba74;
-  --accent-400: #fb923c;
-  --accent-500: #f97316;
-  --accent-600: #ea580c;
-  --accent-700: #c2410c;
-  --accent-800: #9a3412;
-  --accent-900: #7c2d12;
-  
-  --gray-50: #f9fafb;
-  --gray-100: #f3f4f6;
-  --gray-200: #e5e7eb;
-  --gray-300: #d1d5db;
-  --gray-400: #9ca3af;
-  --gray-500: #6b7280;
-  --gray-600: #4b5563;
-  --gray-700: #374151;
-  --gray-800: #1f2937;
-  --gray-900: #111827;
-  
+
+  --accent-50: #ecfdf5;
+  --accent-100: #d1fae5;
+  --accent-200: #a7f3d0;
+  --accent-300: #6ee7b7;
+  --accent-400: #34d399;
+  --accent-500: #10b981;
+  --accent-600: #059669;
+  --accent-700: #047857;
+  --accent-800: #065f46;
+  --accent-900: #064e3b;
+
+  --neutral-50: #fafafa;
+  --neutral-100: #f5f5f5;
+  --neutral-200: #e5e5e5;
+  --neutral-300: #d4d4d4;
+  --neutral-400: #a3a3a3;
+  --neutral-500: #737373;
+  --neutral-600: #525252;
+  --neutral-700: #404040;
+  --neutral-800: #262626;
+  --neutral-900: #171717;
+
+  --gray-50: #fafafa;
+  --gray-100: #f4f4f5;
+  --gray-200: #e4e4e7;
+  --gray-300: #d4d4d8;
+  --gray-400: #a1a1aa;
+  --gray-500: #71717a;
+  --gray-600: #52525b;
+  --gray-700: #3f3f46;
+  --gray-800: #27272a;
+  --gray-900: #18181b;
+
   --success-50: #f0fdf4;
+  --success-100: #dcfce7;
   --success-500: #22c55e;
   --success-600: #16a34a;
-  
+  --success-700: #15803d;
+
   --warning-50: #fffbeb;
+  --warning-100: #fef3c7;
   --warning-500: #f59e0b;
   --warning-600: #d97706;
-  
+
   --error-50: #fef2f2;
+  --error-100: #fee2e2;
   --error-500: #ef4444;
   --error-600: #dc2626;
-  
+
   --info-50: #eff6ff;
+  --info-100: #dbeafe;
   --info-500: #3b82f6;
   --info-600: #2563eb;
   
@@ -98,6 +114,49 @@
   --z-toast: 1080;
 }
 
+/* Loading Overlay */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.8);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: var(--z-modal);
+}
+
+.loading-overlay.active {
+  display: flex;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid var(--primary-100);
+  border-radius: 50%;
+  border-top-color: var(--primary-600);
+  animation: spin 1s linear infinite;
+}
+
+.loading-message {
+  position: absolute;
+  top: 60%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--primary-700);
+  font-weight: 500;
+  margin-top: 1rem;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Reset and Base Styles */
 *,
 *::before,
@@ -116,8 +175,8 @@ body {
   font-family: var(--font-sans);
   font-size: 16px;
   line-height: 1.6;
-  color: var(--gray-900);
-  background: linear-gradient(135deg, var(--primary-50) 0%, #ffffff 100%);
+  color: var(--neutral-800);
+  background: linear-gradient(135deg, var(--primary-50) 0%, var(--neutral-50) 100%);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

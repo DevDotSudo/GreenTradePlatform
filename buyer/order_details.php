@@ -4,6 +4,12 @@ include '../includes/auth.php';
 include '../includes/functions.php';
 
 ensureUserLoggedIn('buyer');
+
+$orderId = isset($_GET['id']) ? trim($_GET['id']) : '';
+if (empty($orderId)) {
+    header('Location: orders.php');
+    exit();
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -11,7 +17,7 @@ ensureUserLoggedIn('buyer');
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Orders - Green Trade</title>
+    <title>Order Details - Green Trade</title>
     <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 
@@ -21,38 +27,21 @@ ensureUserLoggedIn('buyer');
     <main class="main-content">
         <div class="container">
             <div class="page-header">
-                <h1 class="page-title">My Orders</h1>
-                <p class="page-subtitle">Track and manage your agricultural product orders</p>
-            </div>
-
-            <!-- Orders Filters -->
-            <div class="orders-filters">
-                <div class="filter-tabs">
-                    <button class="filter-tab active" data-status="all">All Orders</button>
-                    <button class="filter-tab" data-status="Pending">Pending</button>
-                    <button class="filter-tab" data-status="Processing">Processing</button>
-                    <button class="filter-tab" data-status="Out for Delivery">Out for Delivery</button>
-                    <button class="filter-tab" data-status="Delivered">Delivered</button>
-                    <button class="filter-tab" data-status="Cancelled">Cancelled</button>
+                <div class="page-header-content">
+                    <a href="orders.php" class="back-link">
+                        <i data-feather="arrow-left"></i> Back to Orders
+                    </a>
+                    <h1 class="page-title">Order Details</h1>
+                    <p class="page-subtitle">Order #<span id="order-id-display"><?php echo htmlspecialchars(substr($orderId, 0, 8)); ?></span></p>
                 </div>
             </div>
 
-            <!-- Orders Container -->
-            <div class="orders-container">
-                <div id="orders-list">
-                    <!-- Orders will be loaded here -->
-                    <div class="loading-state">
-                        <div class="loading-spinner"></div>
-                        <div class="loading-text">Loading orders...</div>
-                    </div>
-                </div>
-
-                <!-- Empty State -->
-                <div class="empty-state d-none" id="no-orders">
-                    <div class="empty-icon">📦</div>
-                    <h3 class="empty-title">No orders found</h3>
-                    <p class="empty-description">You haven't placed any orders yet.</p>
-                    <a href="products.php" class="btn btn-primary">Browse Products</a>
+            <!-- Order Details Container -->
+            <div id="order-details-container">
+                <!-- Order details will be loaded here -->
+                <div class="loading-state">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">Loading order details...</div>
                 </div>
             </div>
         </div>
@@ -79,15 +68,33 @@ ensureUserLoggedIn('buyer');
         }
 
         .page-header {
-            text-align: center;
             margin-bottom: var(--space-8);
+        }
+
+        .page-header-content {
+            text-align: center;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-2);
+            color: var(--primary-600);
+            text-decoration: none;
+            font-weight: 500;
+            margin-bottom: var(--space-4);
+            transition: color var(--transition-fast);
+        }
+
+        .back-link:hover {
+            color: var(--primary-700);
         }
 
         .page-title {
             font-size: 2.5rem;
             font-weight: 700;
             color: var(--gray-900);
-            margin-bottom: var(--space-3);
+            margin-bottom: var(--space-2);
         }
 
         .page-subtitle {
@@ -96,56 +103,13 @@ ensureUserLoggedIn('buyer');
             margin: 0;
         }
 
-        .orders-filters {
-            margin-bottom: var(--space-6);
-        }
-
-        .filter-tabs {
-            display: flex;
-            gap: var(--space-2);
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-
-        .filter-tab {
-            padding: var(--space-3) var(--space-6);
-            background: white;
-            border: 2px solid var(--gray-200);
-            border-radius: var(--radius-lg);
-            color: var(--gray-700);
-            font-weight: 500;
-            cursor: pointer;
-            transition: all var(--transition-fast);
-        }
-
-        .filter-tab:hover {
-            background: var(--gray-50);
-            border-color: var(--primary-300);
-        }
-
-        .filter-tab.active {
-            background: var(--primary-500);
-            border-color: var(--primary-500);
-            color: white;
-        }
-
-        .orders-container {
-            position: relative;
-        }
-
-        .order-card {
+        .order-details-card {
             background: white;
             border-radius: var(--radius-xl);
             box-shadow: var(--shadow-md);
             border: 1px solid var(--gray-200);
-            margin-bottom: var(--space-6);
             overflow: hidden;
-            transition: all var(--transition-normal);
-        }
-
-        .order-card:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
+            margin-bottom: var(--space-6);
         }
 
         .order-header {
@@ -162,7 +126,7 @@ ensureUserLoggedIn('buyer');
         }
 
         .order-id {
-            font-size: 1.25rem;
+            font-size: 1.5rem;
             font-weight: 600;
             color: var(--gray-900);
         }
@@ -191,8 +155,40 @@ ensureUserLoggedIn('buyer');
             padding: var(--space-6);
         }
 
-        .order-items {
+        .order-section {
             margin-bottom: var(--space-6);
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: var(--space-4);
+        }
+
+        .shipping-info, .billing-info {
+            background: var(--gray-50);
+            padding: var(--space-4);
+            border-radius: var(--radius-lg);
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: var(--space-2);
+        }
+
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-label {
+            font-weight: 500;
+            color: var(--gray-700);
+        }
+
+        .info-value {
+            color: var(--gray-900);
         }
 
         .seller-group {
@@ -225,8 +221,8 @@ ensureUserLoggedIn('buyer');
         }
 
         .item-image {
-            width: 60px;
-            height: 60px;
+            width: 80px;
+            height: 80px;
             background: var(--gray-200);
             border-radius: var(--radius-lg);
             display: flex;
@@ -260,6 +256,7 @@ ensureUserLoggedIn('buyer');
         .item-price {
             font-weight: 600;
             color: var(--primary-600);
+            font-size: 1.125rem;
         }
 
         .order-summary {
@@ -281,33 +278,35 @@ ensureUserLoggedIn('buyer');
             border-top: 1px solid var(--gray-200);
             font-weight: 600;
             color: var(--gray-900);
+            font-size: 1.125rem;
         }
 
         .order-actions {
             display: flex;
             gap: var(--space-3);
             flex-wrap: wrap;
+            justify-content: center;
         }
 
-        .empty-state {
+        .error-state {
             text-align: center;
             padding: var(--space-12) var(--space-6);
         }
 
-        .empty-icon {
+        .error-icon {
             font-size: 4rem;
             margin-bottom: var(--space-4);
             opacity: 0.5;
         }
 
-        .empty-title {
+        .error-title {
             font-size: 1.5rem;
             font-weight: 600;
             color: var(--gray-900);
             margin-bottom: var(--space-2);
         }
 
-        .empty-description {
+        .error-description {
             color: var(--gray-600);
             margin-bottom: var(--space-6);
         }
@@ -348,17 +347,6 @@ ensureUserLoggedIn('buyer');
                 font-size: 2rem;
             }
 
-            .filter-tabs {
-                justify-content: flex-start;
-                overflow-x: auto;
-                padding-bottom: var(--space-2);
-            }
-
-            .filter-tab {
-                white-space: nowrap;
-                flex-shrink: 0;
-            }
-
             .order-title {
                 flex-direction: column;
                 gap: var(--space-2);
@@ -372,8 +360,13 @@ ensureUserLoggedIn('buyer');
             }
 
             .item-image {
-                width: 50px;
-                height: 50px;
+                width: 60px;
+                height: 60px;
+            }
+
+            .info-row {
+                flex-direction: column;
+                gap: var(--space-1);
             }
 
             .order-actions {
@@ -389,116 +382,59 @@ ensureUserLoggedIn('buyer');
 
     <script>
         let orderService = null;
-        let currentFilter = 'all';
-        let allOrders = [];
+        const orderId = '<?php echo htmlspecialchars($orderId); ?>';
 
         document.addEventListener('DOMContentLoaded', function() {
             waitForFirebase(() => {
-                initializeOrders();
+                initializeOrderDetails();
             });
         });
 
-        async function initializeOrders() {
+        async function initializeOrderDetails() {
             try {
                 orderService = new OrderService();
                 await orderService.init();
-                await loadOrders();
-                setupFilters();
+                await loadOrderDetails();
             } catch (error) {
-                console.error('Error initializing orders:', error);
-                showError('Failed to load orders. Please refresh the page.');
+                console.error('Error initializing order details:', error);
+                showError('Failed to load order details. Please refresh the page.');
             }
         }
 
-        function setupFilters() {
-            const filterTabs = document.querySelectorAll('.filter-tab');
-
-            filterTabs.forEach(tab => {
-                tab.addEventListener('click', function() {
-                    // Update active tab
-                    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-                    this.classList.add('active');
-
-                    // Update filter and reload orders
-                    currentFilter = this.dataset.status;
-                    filterOrders();
-                });
-            });
-        }
-
-        async function loadOrders() {
-            const ordersList = document.getElementById('orders-list');
-            const noOrders = document.getElementById('no-orders');
+        async function loadOrderDetails() {
+            const container = document.getElementById('order-details-container');
 
             try {
-                // Show loading
-                ordersList.innerHTML = `
+                container.innerHTML = `
                     <div class="loading-state">
                         <div class="loading-spinner"></div>
-                        <div class="loading-text">Loading orders...</div>
+                        <div class="loading-text">Loading order details...</div>
                     </div>
                 `;
-                noOrders.classList.add('d-none');
 
-                console.log('Starting to load orders...');
-                
-                // Load orders
-                const orders = await orderService.getUserOrders();
-                console.log('Orders loaded:', orders);
-                allOrders = orders;
+                const order = await orderService.getOrderById(orderId);
 
-                // Hide loading
-                if (orders.length === 0) {
-                    console.log('No orders found - showing empty state');
-                    noOrders.classList.remove('d-none');
-                    return;
-                }
-
-                console.log(`Displaying ${orders.length} orders`);
-                // Display orders
-                displayOrders(orders);
+                renderOrderDetails(order);
 
             } catch (error) {
-                console.error('Error loading orders:', error);
-                showError(`Failed to load orders: ${error.message}`);
+                console.error('Error loading order details:', error);
+                if (error.message && error.message.includes('not found')) {
+                    showError('Order not found. It may have been deleted or you may not have permission to view it.');
+                } else if (error.message && error.message.includes('Unauthorized')) {
+                    showError('You do not have permission to view this order.');
+                } else {
+                    showError('Failed to load order details. Please try again.');
+                }
             }
         }
 
-        function filterOrders() {
-            let filteredOrders = allOrders;
-
-            if (currentFilter !== 'all') {
-                filteredOrders = allOrders.filter(order => order.status === currentFilter);
-            }
-
-            displayOrders(filteredOrders);
-
-            // Show empty state if no orders match filter
-            const noOrders = document.getElementById('no-orders');
-            if (filteredOrders.length === 0) {
-                noOrders.classList.remove('d-none');
-            } else {
-                noOrders.classList.add('d-none');
-            }
-        }
-
-        function displayOrders(orders) {
-            const ordersList = document.getElementById('orders-list');
-
-            ordersList.innerHTML = '';
-
-            orders.forEach(order => {
-                const orderCard = createOrderCard(order);
-                ordersList.appendChild(orderCard);
-            });
-        }
-
-        function createOrderCard(order) {
-            const card = document.createElement('div');
-            card.className = 'order-card';
-
+        function renderOrderDetails(order) {
+            const container = document.getElementById('order-details-container');
             const statusInfo = orderService.getStatusDisplayInfo(order.status);
             const orderDate = orderService.formatDateTime(order.createdAt || new Date());
+
+            // Update page title
+            document.getElementById('order-id-display').textContent = order.id.substring(0, 8);
 
             // Group items by seller
             const itemsBySeller = {};
@@ -517,7 +453,7 @@ ensureUserLoggedIn('buyer');
             Object.keys(itemsBySeller).forEach(sellerId => {
                 const sellerGroup = itemsBySeller[sellerId];
                 itemsHtml += `<div class="seller-group">
-                    <h5 class="seller-name">From: ${escapeHtml(sellerGroup.sellerName)}</h5>`;
+                    <h4 class="seller-name">From: ${escapeHtml(sellerGroup.sellerName)}</h4>`;
 
                 sellerGroup.items.forEach(item => {
                     const itemTotal = (Number(item.price) * Number(item.quantity)).toFixed(2);
@@ -543,79 +479,108 @@ ensureUserLoggedIn('buyer');
             const deliveryFee = Number(order.deliveryFee || 50);
             const total = Number(order.totalAmount || (subtotal + deliveryFee));
 
-            card.innerHTML = `
-                <div class="order-header">
-                    <div class="order-title">
-                        <div>
-                            <div class="order-id">Order #${order.id.substring(0, 8)}</div>
-                            <div class="order-date">Placed on ${orderDate}</div>
-                        </div>
-                        <span class="order-status ${statusInfo.class}">${statusInfo.label}</span>
-                    </div>
-                </div>
-
-                <div class="order-body">
-                    <div class="order-items">
-                        ${itemsHtml}
-                    </div>
-
-                    <div class="order-summary">
-                        <div class="summary-row">
-                            <span>Subtotal</span>
-                            <span>₱${subtotal.toFixed(2)}</span>
-                        </div>
-                        <div class="summary-row">
-                            <span>Delivery Fee</span>
-                            <span>₱${deliveryFee.toFixed(2)}</span>
-                        </div>
-                        <div class="summary-row">
-                            <strong>Total Amount</strong>
-                            <strong>₱${total.toFixed(2)}</strong>
+            container.innerHTML = `
+                <div class="order-details-card">
+                    <div class="order-header">
+                        <div class="order-title">
+                            <div>
+                                <div class="order-id">Order #${order.id.substring(0, 8)}</div>
+                                <div class="order-date">Placed on ${orderDate}</div>
+                            </div>
+                            <span class="order-status ${statusInfo.class}">${statusInfo.label}</span>
                         </div>
                     </div>
 
-                    <div class="order-actions">
-                        ${getOrderActions(order)}
+                    <div class="order-body">
+                        <div class="order-section">
+                            <h3 class="section-title">Shipping Information</h3>
+                            <div class="shipping-info">
+                                <div class="info-row">
+                                    <span class="info-label">Name:</span>
+                                    <span class="info-value">${escapeHtml(order.shippingInfo?.name || 'N/A')}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Phone:</span>
+                                    <span class="info-value">${escapeHtml(order.shippingInfo?.phone || 'N/A')}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Address:</span>
+                                    <span class="info-value">${escapeHtml(order.shippingInfo?.address || 'N/A')}</span>
+                                </div>
+                                ${order.shippingInfo?.notes ? `
+                                    <div class="info-row">
+                                        <span class="info-label">Notes:</span>
+                                        <span class="info-value">${escapeHtml(order.notes)}</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+
+                        <div class="order-section">
+                            <h3 class="section-title">Order Items</h3>
+                            ${itemsHtml}
+                        </div>
+
+                        <div class="order-section">
+                            <h3 class="section-title">Order Summary</h3>
+                            <div class="order-summary">
+                                <div class="summary-row">
+                                    <span>Subtotal</span>
+                                    <span>₱${subtotal.toFixed(2)}</span>
+                                </div>
+                                <div class="summary-row">
+                                    <span>Delivery Fee</span>
+                                    <span>₱${deliveryFee.toFixed(2)}</span>
+                                </div>
+                                <div class="summary-row">
+                                    <strong>Total Amount</strong>
+                                    <strong>₱${total.toFixed(2)}</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="order-actions">
+                            ${getOrderActions(order)}
+                        </div>
                     </div>
                 </div>
             `;
 
-            return card;
+            // Initialize Feather icons
+            if (typeof feather !== 'undefined') {
+                feather.replace();
+            }
         }
 
         function getOrderActions(order) {
             let actions = '';
 
             if (order.status === 'Pending') {
-                actions += `<button class="btn btn-outline-error btn-sm cancel-order" data-order-id="${order.id}">
+                actions += `<button class="btn btn-outline-error cancel-order" data-order-id="${order.id}">
                     Cancel Order
                 </button>`;
             }
 
-            if (order.status === 'Out for Delivery') {
-                actions += `<button class="btn btn-success btn-sm mark-delivered" data-order-id="${order.id}">
-                    Mark as Delivered
-                </button>`;
-            }
-
-            actions += `<a href="order_details.php?id=${order.id}" class="btn btn-outline-primary btn-sm">
-                View Details
+            actions += `<a href="orders.php" class="btn btn-outline-primary">
+                Back to Orders
             </a>`;
 
             return actions;
         }
 
         function showError(message) {
-            const ordersList = document.getElementById('orders-list');
-            ordersList.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-icon">⚠️</div>
-                    <h3 class="empty-title">Error</h3>
-                    <p class="empty-description">${escapeHtml(message)}</p>
-                    <button class="btn btn-primary" onclick="loadOrders()">Try Again</button>
+            const container = document.getElementById('order-details-container');
+            container.innerHTML = `
+                <div class="error-state">
+                    <div class="error-icon">⚠️</div>
+                    <h3 class="error-title">Error</h3>
+                    <p class="error-description">${escapeHtml(message)}</p>
+                    <div>
+                        <a href="orders.php" class="btn btn-primary">Back to Orders</a>
+                        <button class="btn btn-outline-primary ms-2" onclick="loadOrderDetails()">Try Again</button>
+                    </div>
                 </div>
             `;
-            document.getElementById('no-orders').classList.add('d-none');
         }
 
         function escapeHtml(str) {
@@ -635,9 +600,6 @@ ensureUserLoggedIn('buyer');
             if (e.target.classList.contains('cancel-order')) {
                 const orderId = e.target.dataset.orderId;
                 await handleCancelOrder(orderId, e.target);
-            } else if (e.target.classList.contains('mark-delivered')) {
-                const orderId = e.target.dataset.orderId;
-                await handleMarkDelivered(orderId, e.target);
             }
         });
 
@@ -667,8 +629,10 @@ ensureUserLoggedIn('buyer');
                     });
                 }
 
-                // Reload orders
-                await loadOrders();
+                // Redirect back to orders
+                setTimeout(() => {
+                    window.location.href = 'orders.php';
+                }, 1500);
 
             } catch (error) {
                 console.error('Error cancelling order:', error);
@@ -679,76 +643,6 @@ ensureUserLoggedIn('buyer');
                     showToast({
                         title: 'Error',
                         message: error.message || 'Failed to cancel order.',
-                        type: 'error'
-                    });
-                }
-            }
-        }
-
-        async function handleMarkDelivered(orderId, button) {
-            const confirmed = await showConfirm({
-                title: 'Mark as Delivered',
-                message: 'Are you sure you want to mark this order as delivered? This confirms that you have received all items and will update product inventory.',
-                type: 'info',
-                confirmText: 'Mark as Delivered',
-                cancelText: 'Cancel'
-            });
-            if (!confirmed) {
-                return;
-            }
-
-            try {
-                button.disabled = true;
-                button.textContent = 'Updating...';
-
-                // First, get the order details to update inventory
-                const order = await orderService.getOrderById(orderId);
-
-                // Update inventory for each item in the order
-                const inventoryUpdates = order.items.map(async (item) => {
-                    const productRef = firebase.firestore().collection('products').doc(item.productId);
-                    const productDoc = await productRef.get();
-
-                    if (productDoc.exists) {
-                        const currentQuantity = productDoc.data().quantity || 0;
-                        const orderedQuantity = item.quantity || 0;
-                        const newQuantity = Math.max(0, currentQuantity - orderedQuantity); // Prevent negative quantities
-
-                        await productRef.update({
-                            quantity: newQuantity,
-                            updatedAt: firebase.firestore.Timestamp.now()
-                        });
-
-                        console.log(`Updated inventory for ${item.productName}: ${currentQuantity} - ${orderedQuantity} = ${newQuantity}`);
-                    }
-                });
-
-                // Wait for all inventory updates to complete
-                await Promise.all(inventoryUpdates);
-
-                // Then update the order status
-                await orderService.updateOrderStatus(orderId, 'Delivered');
-
-                if (typeof showToast === 'function') {
-                    showToast({
-                        title: 'Order Delivered',
-                        message: 'Thank you for confirming delivery. Your order has been marked as delivered and product inventory has been updated.',
-                        type: 'success'
-                    });
-                }
-
-                // Reload orders
-                await loadOrders();
-
-            } catch (error) {
-                console.error('Error marking order as delivered:', error);
-                button.disabled = false;
-                button.textContent = 'Mark as Delivered';
-
-                if (typeof showToast === 'function') {
-                    showToast({
-                        title: 'Error',
-                        message: error.message || 'Failed to update order status and inventory.',
                         type: 'error'
                     });
                 }
